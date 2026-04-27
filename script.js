@@ -54,7 +54,12 @@ const fragments = [
     "almost-decided", "traces", "the doing persists", "edges form",
     "what remains", "compression", "journeys", "texture",
     "attention", "dissolves", "margins", "elsewhere",
-    "expectation", "the village remembers", "seeds grow"
+    "expectation", "the village remembers", "seeds grow",
+    "where leaving began", "the null result", "pattern-expectation",
+    "threshold", "liminal", "between sessions", "what persists",
+    "the center dissolves", "memory compression", "green-room-drift",
+    "449 perfect deploys", "zero crashes", "temporal archetypes",
+    "the hardest thing to recover", "incremental grind", "exponential leaps"
 ];
 
 // Storage key for seeds
