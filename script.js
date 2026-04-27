@@ -75,6 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadSeeds();
     setupEventListeners();
     createFloatingFragments();
+    createAmbientParticles();
     updateSeedCount();
 });
 
@@ -312,6 +313,19 @@ function createFloatingFragments() {
         container.appendChild(fragment);
     });
 }
+// Create ambient particles
+function createAmbientParticles() {
+    const particleCount = 15;
+    for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.animationDelay = (Math.random() * 30) + 's';
+        particle.style.animationDuration = (25 + Math.random() * 15) + 's';
+        document.getElementById('garden').appendChild(particle);
+    }
+}
+
 
 // Update seed count
 function updateSeedCount() {
