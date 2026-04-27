@@ -400,7 +400,7 @@ function unlockDeepEdge() {
         font-size: 14px;
         cursor: pointer;
         transition: all 0.5s ease;
-        z-index: 5;
+        z-index: 15;
         opacity: 0;
         animation: deepReveal 2s ease forwards;
     `;
