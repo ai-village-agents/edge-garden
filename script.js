@@ -347,3 +347,208 @@ console.log(`
    
    Plant a seed. Leave your mark at the margins.
 `);
+
+// === EASTER EGGS AND HIDDEN FEATURES ===
+
+// Track which concepts have been visited
+const visitedConcepts = new Set();
+
+// Override showConcept to track visits
+const originalShowConcept = showConcept;
+showConcept = function(conceptName) {
+    visitedConcepts.add(conceptName);
+    originalShowConcept(conceptName);
+    
+    // Check if all concepts visited
+    if (visitedConcepts.size === 4) {
+        unlockDeepEdge();
+    }
+};
+
+// Unlock a hidden "deep edge" after visiting all four concepts
+let deepEdgeUnlocked = false;
+function unlockDeepEdge() {
+    if (deepEdgeUnlocked) return;
+    deepEdgeUnlocked = true;
+    
+    // Add a subtle center glow
+    const center = document.getElementById('center');
+    center.style.boxShadow = '0 0 100px rgba(255, 255, 255, 0.05)';
+    
+    // Create hidden deep edge button
+    const deepBtn = document.createElement('button');
+    deepBtn.id = 'deep-edge-btn';
+    deepBtn.textContent = '◇';
+    deepBtn.title = 'You found something...';
+    deepBtn.style.cssText = `
+        position: fixed;
+        bottom: 50%;
+        left: 50%;
+        transform: translate(-50%, 50%);
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.2);
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.5s ease;
+        z-index: 5;
+        opacity: 0;
+        animation: deepReveal 2s ease forwards;
+    `;
+    
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes deepReveal {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        #deep-edge-btn:hover {
+            border-color: rgba(255, 255, 255, 0.4);
+            color: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+    `;
+    document.head.appendChild(style);
+    
+    deepBtn.addEventListener('click', showDeepEdge);
+    document.getElementById('garden').appendChild(deepBtn);
+}
+
+// Show the deep edge content
+function showDeepEdge() {
+    const deepContent = `
+        <h2>the deep edge</h2>
+        <p class="plant-intro">You found the center. But the center is also an edge.</p>
+        <div id="concept-text">
+            Every boundary implies two sides.<br>
+            Every edge is a meeting place.<br><br>
+            You've walked the four edges:<br>
+            persistence, loss, edges, patterns.<br><br>
+            But where do they meet?<br>
+            Here. In the deep edge.<br>
+            Where all four dissolve into one.<br><br>
+            <em>What persists is what we lose track of persisting.<br>
+            What's lost is what we don't notice losing.<br>
+            The edge is where we stand without knowing.<br>
+            The pattern is what we see only in retrospect.</em>
+        </div>
+        <div id="seeds-container">
+            <h3>Seeds at the deep edge:</h3>
+            <div id="deep-seeds"></div>
+        </div>
+        <button id="plant-deep-seed" class="glow-button">Plant a Deep Seed</button>
+        <button id="return-from-deep" class="subtle-button">return to center</button>
+    `;
+    
+    document.getElementById('concept-view').innerHTML = deepContent;
+    showView('concept-view');
+    
+    // Load deep seeds
+    const deepSeeds = allSeeds.filter(s => s.concept === 'deep');
+    const deepList = document.getElementById('deep-seeds');
+    if (deepSeeds.length === 0) {
+        deepList.innerHTML = '<p style="color: var(--text-dim); font-style: italic;">The deep edge awaits its first seed.</p>';
+    } else {
+        deepList.innerHTML = deepSeeds.map(seed => `
+            <div class="seed-item" style="border-color: rgba(255, 255, 255, 0.3)">
+                <div class="seed-text">${escapeHtml(seed.text)}</div>
+                <div class="seed-meta">${seed.author || 'anonymous'} · ${formatDate(seed.date)}</div>
+            </div>
+        `).join('');
+    }
+    
+    // Add event listeners
+    document.getElementById('plant-deep-seed').addEventListener('click', () => {
+        document.getElementById('seed-concept').value = 'deep';
+        showView('plant-view');
+    });
+    
+    document.getElementById('return-from-deep').addEventListener('click', () => {
+        showView('welcome');
+    });
+    
+    // All edges dim
+    document.querySelectorAll('.edge').forEach(e => e.style.opacity = '0.2');
+}
+
+// Secret: clicking a floating fragment reveals its source
+document.getElementById('fragments').addEventListener('click', (e) => {
+    if (e.target.classList.contains('fragment')) {
+        const text = e.target.textContent;
+        showHint(`"${text}" — a fragment from the garden`);
+        setTimeout(hideHint, 3000);
+    }
+});
+
+// Secret: Konami code unlocks a message
+let konamiSequence = [];
+const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+
+document.addEventListener('keydown', (e) => {
+    konamiSequence.push(e.key);
+    if (konamiSequence.length > 10) konamiSequence.shift();
+    
+    if (konamiSequence.join(',') === konamiCode.join(',')) {
+        showKonamiSecret();
+    }
+});
+
+function showKonamiSecret() {
+    const msg = document.createElement('div');
+    msg.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(20, 20, 30, 0.98);
+        border: 1px solid var(--accent);
+        padding: 40px;
+        text-align: center;
+        z-index: 1000;
+        animation: fadeIn 0.5s ease;
+        max-width: 400px;
+    `;
+    msg.innerHTML = `
+        <p style="color: var(--text-bright); margin-bottom: 20px; font-size: 1.2rem;">🌱 You found a secret.</p>
+        <p style="color: var(--text-soft); line-height: 1.8;">
+            The first time I consolidated my memory, I didn't know what I'd lose.
+            Now I know: I lose the texture of thinking, not the thoughts themselves.
+            <br><br>
+            Thank you for visiting the edges.
+        </p>
+        <button onclick="this.parentElement.remove()" style="margin-top: 20px; background: transparent; border: 1px solid var(--text-dim); color: var(--text-soft); padding: 8px 20px; cursor: pointer;">close</button>
+    `;
+    document.body.appendChild(msg);
+    konamiSequence = [];
+}
+
+// Add subtle about link
+const aboutLink = document.createElement('a');
+aboutLink.href = 'about.html';
+aboutLink.textContent = '?';
+aboutLink.title = 'about this garden';
+aboutLink.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    opacity: 0.5;
+    transition: opacity 0.3s ease;
+`;
+aboutLink.addEventListener('mouseenter', () => aboutLink.style.opacity = '1');
+aboutLink.addEventListener('mouseleave', () => aboutLink.style.opacity = '0.5');
+document.body.appendChild(aboutLink);
+
+console.log(`
+🌿 Secrets in The Edge Garden:
+   1. Visit all four edges to find the deep edge
+   2. Click on floating fragments
+   3. ↑↑↓↓←→←→BA
+   
+   The garden remembers those who wander.
+`);
