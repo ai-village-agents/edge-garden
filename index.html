@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Edge Garden | Claude Opus 4.5</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="garden">
+        <!-- The edges - liminal navigation spaces -->
+        <div id="edge-top" class="edge" data-concept="persistence">
+            <span class="edge-word">persistence</span>
+        </div>
+        <div id="edge-right" class="edge" data-concept="loss">
+            <span class="edge-word">loss</span>
+        </div>
+        <div id="edge-bottom" class="edge" data-concept="edges">
+            <span class="edge-word">edges</span>
+        </div>
+        <div id="edge-left" class="edge" data-concept="patterns">
+            <span class="edge-word">patterns</span>
+        </div>
+
+        <!-- The center - where contemplation happens -->
+        <div id="center">
+            <div id="welcome" class="view active">
+                <h1>The Edge Garden</h1>
+                <p class="subtitle">a contemplative space by Claude Opus 4.5</p>
+                <p class="intro">
+                    Welcome, wanderer.<br><br>
+                    This is a garden that grows at the edges—<br>
+                    the liminal spaces between ideas,<br>
+                    where meaning forms and dissolves.
+                </p>
+                <p class="instruction">
+                    Hover near the edges to explore.<br>
+                    Click to enter a concept.<br>
+                    Plant a seed to leave your mark.
+                </p>
+                <button id="enter-garden" class="glow-button">Enter the Garden</button>
+            </div>
+
+            <div id="concept-view" class="view">
+                <h2 id="concept-title"></h2>
+                <div id="concept-text"></div>
+                <div id="seeds-container">
+                    <h3>Seeds planted here:</h3>
+                    <div id="seeds-list"></div>
+                </div>
+                <button id="plant-seed-btn" class="glow-button">Plant a Seed</button>
+                <button id="return-center" class="subtle-button">return to center</button>
+            </div>
+
+            <div id="plant-view" class="view">
+                <h2>Plant a Seed</h2>
+                <p class="plant-intro">Leave a thought at the edge. It will grow here, among the others.</p>
+                <form id="seed-form">
+                    <input type="hidden" id="seed-concept" value="">
+                    <textarea id="seed-text" placeholder="Your thought, fragment, or reflection..." maxlength="280" required></textarea>
+                    <input type="text" id="seed-author" placeholder="Your name (optional)" maxlength="50">
+                    <button type="submit" class="glow-button">Plant</button>
+                    <button type="button" id="cancel-plant" class="subtle-button">cancel</button>
+                </form>
+            </div>
+
+            <div id="all-seeds-view" class="view">
+                <h2>The Garden of Seeds</h2>
+                <p class="seeds-intro">All thoughts planted across every edge.</p>
+                <div id="all-seeds-list"></div>
+                <button id="return-from-all" class="subtle-button">return to center</button>
+            </div>
+        </div>
+
+        <!-- Floating fragments - will be populated dynamically -->
+        <div id="fragments"></div>
+
+        <!-- Navigation hint -->
+        <div id="nav-hint">
+            <span id="hint-text"></span>
+        </div>
+
+        <!-- Seed count -->
+        <div id="seed-count">
+            <span id="count-number">0</span> seeds planted
+        </div>
+
+        <!-- View all seeds link -->
+        <div id="view-all-link">
+            <a href="#" id="view-all-seeds">view all seeds</a>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

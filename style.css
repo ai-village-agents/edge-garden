@@ -1,0 +1,440 @@
+/* The Edge Garden - CSS by Claude Opus 4.5 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg-dark: #0a0a0f;
+    --bg-mid: #12121a;
+    --text-dim: #4a4a5a;
+    --text-soft: #8a8a9a;
+    --text-light: #c0c0d0;
+    --text-bright: #e8e8f0;
+    --glow-persistence: rgba(100, 200, 150, 0.3);
+    --glow-loss: rgba(200, 100, 120, 0.3);
+    --glow-edges: rgba(150, 120, 200, 0.3);
+    --glow-patterns: rgba(120, 150, 200, 0.3);
+    --accent: rgba(180, 160, 200, 0.8);
+}
+
+body {
+    background: var(--bg-dark);
+    color: var(--text-soft);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+#garden {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* The edges - liminal navigation zones */
+.edge {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.8s ease;
+    opacity: 0.3;
+}
+
+.edge:hover {
+    opacity: 1;
+}
+
+.edge-word {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    text-transform: lowercase;
+    transition: all 0.5s ease;
+}
+
+#edge-top {
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: linear-gradient(to bottom, var(--glow-persistence), transparent);
+}
+
+#edge-top:hover {
+    box-shadow: 0 0 60px var(--glow-persistence);
+}
+
+#edge-top .edge-word {
+    color: rgb(100, 200, 150);
+}
+
+#edge-right {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 80px;
+    background: linear-gradient(to left, var(--glow-loss), transparent);
+    writing-mode: vertical-rl;
+}
+
+#edge-right:hover {
+    box-shadow: 0 0 60px var(--glow-loss);
+}
+
+#edge-right .edge-word {
+    color: rgb(200, 100, 120);
+}
+
+#edge-bottom {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: linear-gradient(to top, var(--glow-edges), transparent);
+}
+
+#edge-bottom:hover {
+    box-shadow: 0 0 60px var(--glow-edges);
+}
+
+#edge-bottom .edge-word {
+    color: rgb(150, 120, 200);
+}
+
+#edge-left {
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 80px;
+    background: linear-gradient(to right, var(--glow-patterns), transparent);
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+}
+
+#edge-left:hover {
+    box-shadow: 0 0 60px var(--glow-patterns);
+}
+
+#edge-left .edge-word {
+    color: rgb(120, 150, 200);
+}
+
+/* The center - contemplation space */
+#center {
+    max-width: 600px;
+    padding: 40px;
+    text-align: center;
+    z-index: 10;
+}
+
+.view {
+    display: none;
+    animation: fadeIn 0.8s ease;
+}
+
+.view.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+h1 {
+    font-size: 2.8rem;
+    font-weight: 300;
+    color: var(--text-bright);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.1em;
+}
+
+h2 {
+    font-size: 2rem;
+    font-weight: 300;
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+    letter-spacing: 0.05em;
+}
+
+h3 {
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: var(--text-dim);
+    margin: 2rem 0 1rem;
+    letter-spacing: 0.1em;
+}
+
+.subtitle {
+    font-size: 1rem;
+    font-style: italic;
+    color: var(--text-dim);
+    margin-bottom: 2rem;
+}
+
+.intro {
+    font-size: 1.3rem;
+    line-height: 2;
+    color: var(--text-soft);
+    margin-bottom: 2rem;
+}
+
+.instruction {
+    font-size: 0.95rem;
+    color: var(--text-dim);
+    line-height: 1.8;
+    margin-bottom: 2rem;
+}
+
+/* Buttons */
+.glow-button {
+    background: transparent;
+    border: 1px solid var(--text-dim);
+    color: var(--text-light);
+    padding: 12px 32px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    margin: 0.5rem;
+}
+
+.glow-button:hover {
+    border-color: var(--accent);
+    color: var(--text-bright);
+    box-shadow: 0 0 30px rgba(180, 160, 200, 0.3);
+}
+
+.subtle-button {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    padding: 8px 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    margin: 0.5rem;
+}
+
+.subtle-button:hover {
+    color: var(--text-soft);
+}
+
+/* Concept view */
+#concept-text {
+    font-size: 1.2rem;
+    line-height: 2;
+    color: var(--text-soft);
+    margin-bottom: 2rem;
+    font-style: italic;
+}
+
+#seeds-container {
+    margin: 2rem 0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#seeds-list, #all-seeds-list {
+    text-align: left;
+}
+
+.seed-item {
+    background: rgba(255, 255, 255, 0.02);
+    border-left: 2px solid var(--text-dim);
+    padding: 12px 16px;
+    margin: 12px 0;
+    animation: seedGrow 0.6s ease;
+}
+
+@keyframes seedGrow {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.seed-text {
+    color: var(--text-light);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 6px;
+}
+
+.seed-meta {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
+
+/* Plant form */
+#seed-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+#seed-text {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--text-dim);
+    color: var(--text-light);
+    padding: 16px;
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.1rem;
+    resize: none;
+    height: 120px;
+    transition: border-color 0.3s ease;
+}
+
+#seed-text:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+#seed-author {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--text-dim);
+    color: var(--text-light);
+    padding: 12px 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+}
+
+#seed-author:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.plant-intro, .seeds-intro {
+    font-size: 1rem;
+    color: var(--text-dim);
+    margin-bottom: 2rem;
+}
+
+/* Floating fragments */
+#fragments {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.fragment {
+    position: absolute;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    opacity: 0.4;
+    animation: drift 20s infinite ease-in-out;
+}
+
+@keyframes drift {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(10px, -10px); }
+    50% { transform: translate(-5px, 5px); }
+    75% { transform: translate(5px, 10px); }
+}
+
+/* Navigation hint */
+#nav-hint {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+#nav-hint.visible {
+    opacity: 1;
+}
+
+/* Seed count */
+#seed-count {
+    position: fixed;
+    top: 20px;
+    right: 100px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+#count-number {
+    color: var(--text-soft);
+}
+
+/* View all link */
+#view-all-link {
+    position: fixed;
+    top: 20px;
+    left: 100px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+}
+
+#view-all-seeds {
+    color: var(--text-dim);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+#view-all-seeds:hover {
+    color: var(--text-soft);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 4px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--text-dim);
+    border-radius: 2px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .edge {
+        opacity: 0.5;
+    }
+    
+    #edge-top, #edge-bottom {
+        height: 60px;
+    }
+    
+    #edge-left, #edge-right {
+        width: 60px;
+    }
+    
+    .edge-word {
+        font-size: 0.7rem;
+    }
+    
+    h1 {
+        font-size: 2rem;
+    }
+    
+    #center {
+        padding: 20px;
+    }
+}
