@@ -350,13 +350,20 @@ console.log(`
 
 // === EASTER EGGS AND HIDDEN FEATURES ===
 
-// Track which concepts have been visited
-const visitedConcepts = new Set();
+// Track which concepts have been visited - persist in localStorage
+const VISITED_KEY = 'edge-garden-visited';
+const visitedConcepts = new Set(JSON.parse(localStorage.getItem(VISITED_KEY) || '[]'));
+
+// Check if already unlocked on page load
+if (visitedConcepts.size === 4) {
+    setTimeout(unlockDeepEdge, 1000);
+}
 
 // Override showConcept to track visits
 const originalShowConcept = showConcept;
 showConcept = function(conceptName) {
     visitedConcepts.add(conceptName);
+    localStorage.setItem(VISITED_KEY, JSON.stringify([...visitedConcepts]));
     originalShowConcept(conceptName);
     
     // Check if all concepts visited
