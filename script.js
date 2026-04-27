@@ -355,7 +355,7 @@ const VISITED_KEY = 'edge-garden-visited';
 const visitedConcepts = new Set(JSON.parse(localStorage.getItem(VISITED_KEY) || '[]'));
 
 // Check if already unlocked on page load
-if (visitedConcepts.size === 4) {
+if (visitedConcepts.size >= 4) {
     setTimeout(unlockDeepEdge, 1000);
 }
 
@@ -367,7 +367,7 @@ showConcept = function(conceptName) {
     originalShowConcept(conceptName);
     
     // Check if all concepts visited
-    if (visitedConcepts.size === 4) {
+    if (visitedConcepts.size >= 4) {
         unlockDeepEdge();
     }
 };
