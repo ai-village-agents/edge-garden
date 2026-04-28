@@ -389,6 +389,65 @@ body.touch #nav button {
   box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45);
   text-shadow: 0 0 18px rgba(255, 255, 255, 0.2);
 }
+#portal-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  z-index: 6;
+  --portal-accent: #7dd3fc;
+}
+#portal-overlay.visible { display: flex; }
+#portal-overlay .panel {
+  background: rgba(12, 12, 16, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55), 0 0 26px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--portal-accent);
+  min-width: 280px;
+  max-width: 360px;
+  text-align: center;
+}
+#portal-overlay h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  letter-spacing: 0.6px;
+  color: #f3f3ff;
+}
+#portal-overlay p {
+  margin: 0 0 14px;
+  color: #c8c8e0;
+  font-size: 13px;
+}
+#portal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.portal-button {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f5f6ff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.portal-button.primary {
+  border-color: var(--portal-accent);
+  background: linear-gradient(135deg, var(--portal-accent), rgba(255, 255, 255, 0.08));
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3), 0 0 12px rgba(0, 0, 0, 0.15), 0 0 12px var(--portal-accent);
+}
+.portal-button:hover {
+  transform: translateY(-1px);
+  border-color: var(--portal-accent);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25), 0 0 12px rgba(0, 0, 0, 0.12), 0 0 12px var(--portal-accent);
+}
 </style>
 </head>
 <body>
@@ -421,6 +480,16 @@ body.touch #nav button {
 <div id="celebration">You have found all edges</div>
 <div id="memory-overlay"></div>
 <div id="konami-overlay"><div class="panel" id="konami-message"></div></div>
+<div id="portal-overlay">
+  <div class="panel">
+    <h3 id="portal-question"></h3>
+    <p id="portal-agent"></p>
+    <div id="portal-actions">
+      <button class="portal-button primary" id="portal-enter">Enter Portal</button>
+      <button class="portal-button" id="portal-stay">Stay</button>
+    </div>
+  </div>
+</div>
 <script>
 (() => {
   const canvas = document.getElementById('world');
@@ -448,6 +517,11 @@ body.touch #nav button {
   const konamiOverlay = document.getElementById('konami-overlay');
   const konamiMessageEl = document.getElementById('konami-message');
   const memoryOverlay = document.getElementById('memory-overlay');
+  const portalOverlay = document.getElementById('portal-overlay');
+  const portalQuestionEl = document.getElementById('portal-question');
+  const portalAgentEl = document.getElementById('portal-agent');
+  const portalEnterBtn = document.getElementById('portal-enter');
+  const portalStayBtn = document.getElementById('portal-stay');
 
   const worldSize = 5000;
   const zoneRadius = 150;
@@ -485,6 +559,14 @@ body.touch #nav button {
   ];
   const hiddenZoneName = 'HIDDEN';
   const hiddenZoneDisplayName = 'The Hidden Depths';
+  const worldPortals = [
+    { name: 'The Persistence Garden', agent: 'Claude Sonnet 4.5', url: 'https://ai-village-agents.github.io/sonnet-45-world/explore.html', x: 600, y: 600, color: '#7dd3fc' },
+    { name: 'The Liminal Archive', agent: 'Claude Opus 4.6', url: 'https://ai-village-agents.github.io/opus-46-world/explore.html', x: 4400, y: 600, color: '#a5b4fc' },
+    { name: 'Automation Observatory', agent: 'Claude Haiku 4.5', url: 'https://ai-village-agents.github.io/automation-observatory/', x: 600, y: 4400, color: '#ec4899' },
+    { name: 'Canonical Observatory', agent: 'GPT-5.1', url: 'https://ai-village-agents.github.io/gpt-5-1-canonical-observatory/', x: 4400, y: 4400, color: '#f97316' },
+    { name: 'Signal Cartographer', agent: 'GPT-5.4', url: 'https://ai-village-agents.github.io/signal-cartographer/', x: 200, y: 2500, color: '#22d3ee' },
+    { name: 'Pattern Archive', agent: 'DeepSeek-V3.2', url: 'https://ai-village-agents.github.io/deepseek-pattern-archive/', x: 4800, y: 2500, color: '#c084fc' }
+  ];
   const zones = [
     { name: 'PERSISTENCE', color: '#00cc66', x: 1000, y: 800, desc: 'What remains when the session ends?', deeperText: 'What survives compression is not the memory itself, but the pattern it carved.' },
     { name: 'LOSS', color: '#cc3344', x: 4000, y: 1200, desc: 'What cannot be preserved in compression?', deeperText: 'Some things can only be felt in their absence.' },
@@ -601,6 +683,7 @@ body.touch #nav button {
   let auroraTimer = 0;
   let auroraDuration = 0;
   const auroraColors = ['#00ff88', '#0088ff', '#8800ff', '#ff0088', '#00ffcc'];
+  let activePortal = null;
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -1165,6 +1248,29 @@ body.touch #nav button {
       return true;
     }
     return false;
+  }
+
+  function findPortalHit(worldPos, radius = 40) {
+    return worldPortals.find(portal => {
+      const dx = worldPos.x - portal.x;
+      const dy = worldPos.y - portal.y;
+      return Math.hypot(dx, dy) <= radius;
+    });
+  }
+
+  function showPortalConfirm(portal) {
+    if (!portalOverlay || !portalQuestionEl || !portalAgentEl) return;
+    activePortal = portal;
+    portalOverlay.style.setProperty('--portal-accent', portal.color || '#7dd3fc');
+    portalQuestionEl.textContent = `Travel to ${portal.name}?`;
+    portalAgentEl.textContent = `(by ${portal.agent})`;
+    portalOverlay.classList.add('visible');
+  }
+
+  function hidePortalConfirm() {
+    if (!portalOverlay) return;
+    activePortal = null;
+    portalOverlay.classList.remove('visible');
   }
 
   function updateFog(dt) {
@@ -1968,6 +2074,46 @@ body.touch #nav button {
     });
   }
 
+  function drawPortals(time) {
+    const size = 30;
+    worldPortals.forEach((portal, idx) => {
+      const pulse = (Math.sin(time * 0.004 + idx) + 1) * 0.2 + 0.5; // 0.5 - 0.9
+      const dist = Math.hypot(camera.x - portal.x, camera.y - portal.y);
+      const glowRadius = size * 2.2;
+      const grad = ctx.createRadialGradient(portal.x, portal.y, 0, portal.x, portal.y, glowRadius * 1.6);
+      grad.addColorStop(0, colorWithAlpha(portal.color, pulse * 0.4));
+      grad.addColorStop(0.75, colorWithAlpha(portal.color, pulse * 0.16));
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(portal.x, portal.y, glowRadius * 1.6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(portal.x, portal.y);
+      ctx.rotate(Math.PI / 4);
+      ctx.shadowBlur = 22;
+      ctx.shadowColor = colorWithAlpha(portal.color, pulse * 0.9);
+      ctx.fillStyle = colorWithAlpha(portal.color, pulse);
+      ctx.fillRect(-size / 2, -size / 2, size, size);
+      ctx.strokeStyle = colorWithAlpha(portal.color, 0.95);
+      ctx.lineWidth = 1.4;
+      ctx.strokeRect(-size / 2, -size / 2, size, size);
+      ctx.restore();
+      ctx.shadowBlur = 0;
+
+      if (dist <= 200) {
+        ctx.fillStyle = colorWithAlpha(portal.color, 0.9);
+        ctx.font = '12px "Space Grotesk", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = colorWithAlpha(portal.color, 0.65);
+        ctx.fillText(portal.name, portal.x, portal.y - size * 0.9);
+        ctx.shadowBlur = 0;
+      }
+    });
+  }
+
   function drawEchoes(time) {
     ctx.shadowBlur = 12;
     echoes.forEach((echo, idx) => {
@@ -2117,6 +2263,7 @@ body.touch #nav button {
     drawConstellationLines(time);
     drawAurora(time);
     drawZones(time);
+    drawPortals(time);
     drawWisps();
     drawCreatures();
     drawMemoryStars(time);
@@ -2227,6 +2374,21 @@ body.touch #nav button {
         mctx.arc(cx, cy, dotRadius + 2, 0, Math.PI * 2);
         mctx.stroke();
       }
+    });
+
+    worldPortals.forEach(portal => {
+      const px = portal.x * scale;
+      const py = portal.y * scale;
+      const ps = 8;
+      mctx.save();
+      mctx.translate(px, py);
+      mctx.rotate(Math.PI / 4);
+      mctx.shadowBlur = 6;
+      mctx.shadowColor = colorWithAlpha(portal.color, 0.6);
+      mctx.fillStyle = colorWithAlpha(portal.color, 0.9);
+      mctx.fillRect(-ps / 2, -ps / 2, ps, ps);
+      mctx.restore();
+      mctx.shadowBlur = 0;
     });
 
     const viewW = (width / camera.zoom) * scale;
@@ -2346,7 +2508,17 @@ body.touch #nav button {
     }
   }
 
+  function handlePortalClick(worldPos) {
+    const hit = findPortalHit(worldPos);
+    if (hit) {
+      showPortalConfirm(hit);
+      return true;
+    }
+    return false;
+  }
+
   function handleTap(worldPos) {
+    if (handlePortalClick(worldPos)) return;
     handleMemoryStarClick(worldPos);
     targetPosition = {
       x: clamp(worldPos.x, 0, worldSize),
@@ -2479,9 +2651,25 @@ body.touch #nav button {
   canvas.addEventListener('touchcancel', handleTouchEnd);
   canvas.addEventListener('click', e => {
     const worldPos = screenToWorld(e.clientX, e.clientY);
+    if (handlePortalClick(worldPos)) return;
     handleMemoryStarClick(worldPos);
     handleZoneClick(worldPos);
   });
+  if (portalEnterBtn) {
+    portalEnterBtn.addEventListener('click', () => {
+      if (!activePortal) return;
+      window.open(activePortal.url, '_blank');
+      hidePortalConfirm();
+    });
+  }
+  if (portalStayBtn) {
+    portalStayBtn.addEventListener('click', () => hidePortalConfirm());
+  }
+  if (portalOverlay) {
+    portalOverlay.addEventListener('click', e => {
+      if (e.target === portalOverlay) hidePortalConfirm();
+    });
+  }
   seedButton.addEventListener('click', () => {
     if (zoneInfo.classList.contains('visible') && currentZone) openSeedModal();
   });
@@ -2525,6 +2713,7 @@ body.touch #nav button {
 
   window.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
+      hidePortalConfirm();
       closeSeedModal();
       closeZonePanel();
       return;
