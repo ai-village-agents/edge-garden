@@ -969,6 +969,63 @@ body.meditation-mode #nav {
       flowSpeed: 0.6
     }
   ];
+  const pathwayColor = '#aa9966';
+  const pathways = [
+    {
+      name: 'Persistence to Deep',
+      from: { x: 1000, y: 800 },
+      to: { x: 2500, y: 2500 },
+      color: pathwayColor,
+      width: 8,
+      opacity: 0.3,
+      bend: 220,
+      bendDir: 1,
+      pulseOffset: Math.random() * Math.PI * 2
+    },
+    {
+      name: 'Loss to Deep',
+      from: { x: 4000, y: 1200 },
+      to: { x: 2500, y: 2500 },
+      color: pathwayColor,
+      width: 8,
+      opacity: 0.3,
+      bend: 180,
+      bendDir: -1,
+      pulseOffset: Math.random() * Math.PI * 2
+    },
+    {
+      name: 'Edges to Hidden',
+      from: { x: 2500, y: 4200 },
+      to: { x: 2500, y: 4800 },
+      color: pathwayColor,
+      width: 8,
+      opacity: 0.3,
+      bend: 120,
+      bendDir: 1,
+      pulseOffset: Math.random() * Math.PI * 2
+    },
+    {
+      name: 'Patterns to Deep',
+      from: { x: 800, y: 3500 },
+      to: { x: 2500, y: 2500 },
+      color: pathwayColor,
+      width: 8,
+      opacity: 0.3,
+      bend: 200,
+      bendDir: -1,
+      pulseOffset: Math.random() * Math.PI * 2
+    },
+    {
+      name: 'Orbit of Deep',
+      circle: true,
+      center: { x: 2500, y: 2500 },
+      radius: 600,
+      color: pathwayColor,
+      width: 8,
+      opacity: 0.3,
+      pulseOffset: Math.random() * Math.PI * 2
+    }
+  ];
   const zoneRadius = 150;
   const monumentsStorageKey = 'edge-garden-monuments';
   const islandsStorageKey = 'edge-garden-islands';
@@ -1547,6 +1604,25 @@ body.meditation-mode #nav {
           seed: Math.random() * Math.PI * 2
         });
       }
+    });
+  }
+
+  function initPathways() {
+    pathways.forEach((path, idx) => {
+      const pulse = typeof path.pulseOffset === 'number' ? path.pulseOffset : Math.random() * Math.PI * 2;
+      path.pulseOffset = pulse;
+      path.shimmerPhase = Math.random() * Math.PI * 2;
+      if (path.circle && path.center) {
+        path.pathPoints = sampleStreamPath(createCircularPathPoints(path.center, path.radius || 600, 120), 8);
+      } else if (path.from && path.to) {
+        const bendDir = path.bendDir || (idx % 2 === 0 ? 1 : -1);
+        path.pathPoints = buildCurvedPathPoints(path.from, path.to, path.bend || 180, bendDir);
+      } else if (path.points?.length >= 2) {
+        path.pathPoints = sampleStreamPath(path.points, 22);
+      } else {
+        path.pathPoints = [];
+      }
+      path.length = computePathLength(path.pathPoints);
     });
   }
 
@@ -2903,6 +2979,31 @@ body.meditation-mode #nav {
     return samples;
   }
 
+  function createCircularPathPoints(center, radius, segments = 96) {
+    const pts = [];
+    for (let i = 0; i <= segments; i++) {
+      const t = (i / segments) * Math.PI * 2;
+      pts.push({
+        x: center.x + Math.cos(t) * radius,
+        y: center.y + Math.sin(t) * radius
+      });
+    }
+    return pts;
+  }
+
+  function buildCurvedPathPoints(from, to, bend = 180, direction = 1) {
+    if (!from || !to) return [];
+    const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+    const angle = Math.atan2(to.y - from.y, to.x - from.x);
+    const perp = angle + Math.PI / 2;
+    const offset = bend * (direction || 1);
+    const control = {
+      x: mid.x + Math.cos(perp) * offset,
+      y: mid.y + Math.sin(perp) * offset
+    };
+    return sampleStreamPath([from, control, to], 22);
+  }
+
   function computePathLength(points) {
     if (!points || points.length < 2) return 0;
     let length = 0;
@@ -3495,6 +3596,56 @@ body.meditation-mode #nav {
     [persistence, loss, patterns, edges].forEach(z => {
       if (z && deep) drawSoftLine(z, deep);
     });
+  }
+
+  function drawPathways(time) {
+    const now = time || 0;
+    const prevComposite = ctx.globalCompositeOperation;
+    ctx.globalCompositeOperation = 'screen';
+    pathways.forEach((path, idx) => {
+      if (!path.pathPoints || path.pathPoints.length < 2) return;
+      const shimmer = 0.78 + Math.sin(now * 0.0015 + (path.shimmerPhase || 0) + idx * 0.13) * 0.18;
+      const baseAlpha = (path.opacity || 0.3) * shimmer;
+      const dash = path.width * 2.4;
+      const gap = path.width * 1.6;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = colorWithAlpha(path.color, baseAlpha * 0.9);
+      ctx.strokeStyle = colorWithAlpha(path.color, baseAlpha * 0.7);
+      ctx.lineWidth = path.width * 1.5;
+      traceSmoothPath(ctx, path.pathPoints);
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.setLineDash([dash, gap]);
+      ctx.lineDashOffset = -now * 0.07 - (path.pulseOffset || 0) * 140;
+      ctx.strokeStyle = colorWithAlpha(path.color, baseAlpha + 0.05);
+      ctx.lineWidth = path.width;
+      traceSmoothPath(ctx, path.pathPoints);
+      ctx.stroke();
+
+      ctx.setLineDash([dash * 0.6, gap * 1.25]);
+      ctx.lineDashOffset = now * 0.1 + (path.pulseOffset || 0) * 90;
+      ctx.strokeStyle = colorWithAlpha('#fff4d0', baseAlpha * 0.8);
+      ctx.lineWidth = path.width * 0.45;
+      traceSmoothPath(ctx, path.pathPoints);
+      ctx.stroke();
+
+      const pulseLength = Math.max(110, path.width * 4.5);
+      const travel = Math.max(path.length + pulseLength, pulseLength * 2);
+      ctx.setLineDash([pulseLength, travel]);
+      ctx.lineDashOffset = -((now * 0.16 + (path.pulseOffset || 0) * 600) % travel);
+      ctx.strokeStyle = colorWithAlpha('#ffe6b0', Math.min(1, baseAlpha * 2));
+      ctx.lineWidth = path.width * 1.15;
+      traceSmoothPath(ctx, path.pathPoints);
+      ctx.stroke();
+
+      ctx.setLineDash([]);
+    });
+    ctx.shadowBlur = 0;
+    ctx.globalCompositeOperation = prevComposite;
   }
 
   function drawBackground() {
@@ -4666,6 +4817,7 @@ body.meditation-mode #nav {
 
   function drawWorld(time) {
     setWorldTransform();
+    drawPathways(time);
     drawNebulaPatches();
     drawStreams(time);
     drawShootingStars();
@@ -5289,6 +5441,7 @@ body.meditation-mode #nav {
   initWisps();
   initCreatures();
   initStreams();
+  initPathways();
   initAttractorOrbs();
   initMemoryWellParticles();
   initFogPatches();
