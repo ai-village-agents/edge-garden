@@ -817,6 +817,7 @@ body.meditation-mode #nav {
   <button id="poem-button" aria-label="open collected thoughts">📜</button>
   <button id="meditation-toggle" aria-label="enter meditation mode">🧘</button>
   <button id="rain-toggle" aria-label="toggle rain">🌧️</button>
+  <button id="snow-toggle" aria-label="toggle snow">❄️</button>
 </div>
 <div id="minimap"></div>
 <div id="celebration">You have found all edges</div>
@@ -900,6 +901,7 @@ body.meditation-mode #nav {
   const edgeFragmentEl = document.getElementById('edge-fragment');
   const meditationToggle = document.getElementById('meditation-toggle');
   const rainToggle = document.getElementById('rain-toggle');
+  const snowToggle = document.getElementById('snow-toggle');
   const meditationVignette = document.getElementById('meditation-vignette');
   const windIndicator = document.getElementById('wind-indicator');
   const windArrow = document.getElementById('wind-arrow');
@@ -1283,6 +1285,9 @@ body.meditation-mode #nav {
   const rainDrops = [];
   const RAIN_COUNT = 150;
   let nextShootingStar = 0;
+  let snowEnabled = false;
+  const snowflakes = [];
+  const SNOW_COUNT = 100;
   const monumentColor = '#887766';
   const monuments = [
     { id: 'monument-1', name: 'The First Mark', x: 500, y: 500, message: 'A single stroke that taught the world to notice.' },
@@ -1540,6 +1545,21 @@ body.meditation-mode #nav {
         speed: 8 + Math.random() * 7,
         length: 15 + Math.random() * 15,
         opacity: 0.2 + Math.random() * 0.3
+      });
+    }
+  }
+  function initSnow() {
+    snowflakes.length = 0;
+    for (let i = 0; i < SNOW_COUNT; i++) {
+      snowflakes.push({
+        x: Math.random() * worldWidth,
+        y: Math.random() * worldHeight,
+        size: 2 + Math.random() * 4,
+        speedY: 0.8 + Math.random() * 1.2,
+        drift: (Math.random() - 0.5) * 0.8,
+        wobble: Math.random() * Math.PI * 2,
+        wobbleSpeed: 0.02 + Math.random() * 0.03,
+        opacity: 0.4 + Math.random() * 0.4
       });
     }
   }
@@ -2869,6 +2889,22 @@ body.meditation-mode #nav {
       }
     });
   }
+  function updateSnow(dt, windVector) {
+    if (!snowEnabled || !snowflakes.length) return;
+    const frameScale = dt ? dt / 16.6667 : 1;
+    const dtSec = dt ? dt / 1000 : 0.016;
+    const windPush = windVector ? windVector.dx * 0.3 : 0;
+    snowflakes.forEach(flake => {
+      flake.wobble += flake.wobbleSpeed * frameScale;
+      const wobbleX = Math.sin(flake.wobble) * 0.5;
+      flake.y += flake.speedY * frameScale;
+      flake.x = (flake.x + flake.drift + wobbleX + windPush * dtSec + worldWidth) % worldWidth;
+      if (flake.y > worldHeight) {
+        flake.y = 0;
+        flake.x = Math.random() * worldWidth;
+      }
+    });
+  }
 
   function hexToRgb(hex) {
     const clean = hex.replace('#', '');
@@ -3191,6 +3227,11 @@ body.meditation-mode #nav {
     rainToggle.textContent = rainEnabled ? '☀️' : '🌧️';
     rainToggle.setAttribute('aria-label', rainEnabled ? 'disable rain' : 'toggle rain');
   }
+  function updateSnowToggle() {
+    if (!snowToggle) return;
+    snowToggle.textContent = snowEnabled ? '☀️' : '❄️';
+    snowToggle.setAttribute('aria-label', snowEnabled ? 'disable snow' : 'toggle snow');
+  }
 
   function stopAmbientAudio() {
     if (droneNodes) {
@@ -3387,6 +3428,10 @@ body.meditation-mode #nav {
   function toggleRain() {
     rainEnabled = !rainEnabled;
     updateRainToggle();
+  }
+  function toggleSnow() {
+    snowEnabled = !snowEnabled;
+    updateSnowToggle();
   }
 
   function loadAudioPreference() {
@@ -3792,6 +3837,18 @@ body.meditation-mode #nav {
       ctx.moveTo(drop.x, drop.y);
       ctx.lineTo(drop.x, drop.y + drop.length);
       ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
+  }
+  function drawSnow(ctx) {
+    if (!snowEnabled || !snowflakes.length) return;
+    setWorldTransform();
+    ctx.fillStyle = '#ffffff';
+    snowflakes.forEach(flake => {
+      ctx.globalAlpha = flake.opacity;
+      ctx.beginPath();
+      ctx.arc(flake.x, flake.y, flake.size, 0, Math.PI * 2);
+      ctx.fill();
     });
     ctx.globalAlpha = 1;
   }
@@ -4825,6 +4882,7 @@ body.meditation-mode #nav {
     drawConstellationLines(time);
     drawAurora(time);
     drawRain(ctx);
+    drawSnow(ctx);
     drawZones(time);
     drawMemoryWell(time);
     drawRuins(time);
@@ -5075,6 +5133,7 @@ body.meditation-mode #nav {
     updateFog(scaledDt);
     updateAurora(scaledDt);
     updateRain(scaledDt, windVector);
+    updateSnow(scaledDt, windVector);
     updateWhispers();
     updateRipples(timestamp);
     edgeDistances = computeEdgeDistances();
@@ -5278,6 +5337,7 @@ body.meditation-mode #nav {
   loadAudioPreference();
   audioToggle.addEventListener('click', toggleAmbientAudio);
   if (rainToggle) rainToggle.addEventListener('click', toggleRain);
+  if (snowToggle) snowToggle.addEventListener('click', toggleSnow);
   if (meditationToggle) meditationToggle.addEventListener('click', toggleMeditationMode);
 
   canvas.addEventListener('pointerdown', e => {
@@ -5432,12 +5492,14 @@ body.meditation-mode #nav {
   applyTimeOfDaySettings(timeOfDay);
   refreshTimeOfDay();
   updateRainToggle();
+  updateSnowToggle();
   updatePoemOverlay();
   resize();
   initParticles();
   initFragments();
   initEchoes();
   initRain();
+  initSnow();
   initWisps();
   initCreatures();
   initStreams();
