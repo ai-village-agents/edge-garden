@@ -466,6 +466,23 @@ body.touch #nav button {
     'between states',
     'not yet formed'
   ];
+  const whispers = [
+    'the shape of what was lost',
+    'between one thought and the next',
+    'what the silence holds',
+    'the pattern beneath patterns',
+    'where memories dissolve',
+    'the edge of understanding',
+    'almost within reach',
+    'the weight of unremembered things',
+    'traces in the void',
+    'the grammar of absence',
+    'what remains after compression',
+    'the archaeology of thought',
+    'between signal and noise',
+    'the topology of loss',
+    'where meaning crystallizes'
+  ];
   const hiddenZoneName = 'HIDDEN';
   const hiddenZoneDisplayName = 'The Hidden Depths';
   const zones = [
@@ -519,6 +536,11 @@ body.touch #nav button {
     echomote: '#aaccff'
   };
   const wispCount = 8;
+  let activeWhisper = null;
+  let whisperOpacity = 0;
+  let whisperPosition = { x: 0, y: 0 };
+  let whisperTimer = 0;
+  let nextWhisperTime = 0;
   let lastTrailAdd = 0;
   let currentZone = null;
   let discoveredZones = [];
@@ -553,6 +575,7 @@ body.touch #nav button {
   let droneNodes = null;
   let audioEnabled = false;
   const audioStorageKey = 'edge-garden-audio';
+  let lastZoneAudio = { name: null, intensity: 0 };
   let journalOpen = false;
   let distanceTraveled = 0;
   let timeExploring = 0;
@@ -1031,11 +1054,15 @@ body.touch #nav button {
 
   function updateZonePresence() {
     let inside = null;
+    let nearestAudio = null;
     zones.forEach(z => {
       if (!isZoneVisible(z)) return;
       const dist = Math.hypot(camera.x - z.x, camera.y - z.y);
       if (dist <= 200 && (!inside || dist < inside.dist)) {
         inside = { zone: z, dist };
+      }
+      if (dist <= 400 && (!nearestAudio || dist < nearestAudio.dist)) {
+        nearestAudio = { zone: z, dist };
       }
     });
     if (inside) {
@@ -1048,6 +1075,11 @@ body.touch #nav button {
     } else {
       lastZoneInside = null;
       zoneStayTime = 0;
+    }
+    if (nearestAudio) {
+      updateZoneAudio(nearestAudio.zone.name, nearestAudio.dist);
+    } else {
+      updateZoneAudio(null, null);
     }
   }
 
@@ -1132,6 +1164,44 @@ body.touch #nav button {
     };
   }
 
+  function getNextWhisperFrames() {
+    return Math.floor(600 + Math.random() * 601);
+  }
+
+  function triggerWhisper() {
+    activeWhisper = whispers[Math.floor(Math.random() * whispers.length)];
+    const angle = Math.random() * Math.PI * 2;
+    const radius = Math.random() * 300;
+    whisperPosition = {
+      x: clamp(camera.x + Math.cos(angle) * radius, 0, worldSize),
+      y: clamp(camera.y + Math.sin(angle) * radius, 0, worldSize)
+    };
+    whisperOpacity = 0;
+    whisperTimer = 0;
+  }
+
+  function updateWhispers() {
+    if (nextWhisperTime > 0) nextWhisperTime -= 1;
+    if (nextWhisperTime <= 0 && !activeWhisper) {
+      triggerWhisper();
+      nextWhisperTime = getNextWhisperFrames();
+    }
+    if (activeWhisper) {
+      whisperTimer += 1;
+      if (whisperTimer <= 60) {
+        whisperOpacity = 0.6 * (whisperTimer / 60);
+      } else if (whisperTimer <= 180) {
+        whisperOpacity = 0.6;
+      } else if (whisperTimer <= 240) {
+        whisperOpacity = 0.6 * Math.max(0, 1 - (whisperTimer - 180) / 60);
+      } else {
+        activeWhisper = null;
+        whisperOpacity = 0;
+        whisperTimer = 0;
+      }
+    }
+  }
+
   function colorWithAlpha(hex, alpha) {
     const { r, g, b } = hexToRgb(hex);
     return `rgba(${r}, ${g}, ${b}, ${Math.min(1, alpha)})`;
@@ -1194,14 +1264,24 @@ body.touch #nav button {
 
   function stopAmbientAudio() {
     if (droneNodes) {
-      const { osc1, osc2, lfo } = droneNodes;
+      const { osc1, osc2, lfo, zoneLayers } = droneNodes;
       try { osc1.stop(); } catch (_) {}
       try { osc2.stop(); } catch (_) {}
       try { lfo.stop(); } catch (_) {}
+      if (zoneLayers) {
+        Object.values(zoneLayers).forEach(layer => {
+          (layer.nodes || []).forEach(node => {
+            if (typeof node.stop === 'function') {
+              try { node.stop(); } catch (_) {}
+            }
+          });
+        });
+      }
     }
     droneNodes = null;
     audioEnabled = false;
     localStorage.setItem(audioStorageKey, 'off');
+    lastZoneAudio = { name: null, intensity: 0 };
     updateAudioButton();
   }
 
@@ -1209,9 +1289,14 @@ body.touch #nav button {
     try {
       audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === 'suspended') audioCtx.resume();
+      lastZoneAudio = { name: null, intensity: 0 };
       const masterGain = audioCtx.createGain();
       masterGain.gain.value = 0.03;
       masterGain.connect(audioCtx.destination);
+
+      const baseGain = audioCtx.createGain();
+      baseGain.gain.value = 1;
+      baseGain.connect(masterGain);
 
       const osc1 = audioCtx.createOscillator();
       osc1.type = 'sine';
@@ -1228,13 +1313,121 @@ body.touch #nav button {
       lfoGain.connect(osc1.detune);
       lfoGain.connect(osc2.detune);
 
-      osc1.connect(masterGain);
-      osc2.connect(masterGain);
+      osc1.connect(baseGain);
+      osc2.connect(baseGain);
+
+      const zoneMasterGain = audioCtx.createGain();
+      zoneMasterGain.gain.value = 1;
+      zoneMasterGain.connect(masterGain);
+
+      const zoneLayers = {};
+      const registerZone = (name, builder, level = 0.5) => {
+        const gate = audioCtx.createGain();
+        gate.gain.value = 0;
+        gate.connect(zoneMasterGain);
+        const nodes = builder(gate) || [];
+        zoneLayers[name] = { gain: gate, nodes, level };
+      };
+
+      registerZone('PERSISTENCE', gate => {
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 110;
+        osc.connect(gate);
+        osc.start();
+        return [osc];
+      }, 0.45);
+
+      registerZone('LOSS', gate => {
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 40;
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 120;
+        filter.Q.value = 0.8;
+        osc.connect(filter);
+        filter.connect(gate);
+        osc.start();
+        return [osc, filter];
+      }, 0.5);
+
+      registerZone('EDGES', gate => {
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 150;
+        const wobble = audioCtx.createOscillator();
+        wobble.frequency.value = 0.15;
+        const wobbleGain = audioCtx.createGain();
+        wobbleGain.gain.value = 18;
+        wobble.connect(wobbleGain);
+        wobbleGain.connect(osc.detune);
+        osc.connect(gate);
+        osc.start();
+        wobble.start();
+        return [osc, wobble];
+      }, 0.35);
+
+      registerZone('PATTERNS', gate => {
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 80;
+        const pulseGain = audioCtx.createGain();
+        pulseGain.gain.value = 0.4;
+        const pulseLFO = audioCtx.createOscillator();
+        pulseLFO.frequency.value = 1.6;
+        const pulseDepth = audioCtx.createGain();
+        pulseDepth.gain.value = 0.35;
+        pulseLFO.connect(pulseDepth);
+        pulseDepth.connect(pulseGain.gain);
+        osc.connect(pulseGain);
+        pulseGain.connect(gate);
+        osc.start();
+        pulseLFO.start();
+        return [osc, pulseLFO];
+      }, 0.55);
+
+      registerZone('DEEP', gate => {
+        const harmonicGain = audioCtx.createGain();
+        harmonicGain.gain.value = 0.3;
+        const harmonic1 = audioCtx.createOscillator();
+        harmonic1.type = 'sine';
+        harmonic1.frequency.value = 120;
+        const harmonic2 = audioCtx.createOscillator();
+        harmonic2.type = 'sine';
+        harmonic2.frequency.value = 180;
+        harmonic1.connect(harmonicGain);
+        harmonic2.connect(harmonicGain);
+        harmonicGain.connect(gate);
+        harmonic1.start();
+        harmonic2.start();
+        return [harmonic1, harmonic2];
+      }, 0.5);
+
+      registerZone(hiddenZoneName, gate => {
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 220;
+        const shimmerGain = audioCtx.createGain();
+        shimmerGain.gain.value = 0.6;
+        const tremLFO = audioCtx.createOscillator();
+        tremLFO.frequency.value = 7;
+        const tremDepth = audioCtx.createGain();
+        tremDepth.gain.value = 0.3;
+        tremLFO.connect(tremDepth);
+        tremDepth.connect(shimmerGain.gain);
+        osc.connect(shimmerGain);
+        shimmerGain.connect(gate);
+        osc.start();
+        tremLFO.start();
+        return [osc, tremLFO];
+      }, 0.45);
+
       osc1.start();
       osc2.start();
       lfo.start();
 
-      droneNodes = { osc1, osc2, lfo, masterGain, lfoGain };
+      droneNodes = { osc1, osc2, lfo, masterGain, lfoGain, baseGain, zoneMasterGain, zoneLayers };
       audioEnabled = true;
       localStorage.setItem(audioStorageKey, 'on');
       updateAudioButton();
@@ -1263,6 +1456,23 @@ body.touch #nav button {
 
   function handlePendingAudioStart() {
     if (audioEnabled && !droneNodes) startAmbientAudio();
+  }
+
+  function updateZoneAudio(zoneName, distance) {
+    if (!audioEnabled || !droneNodes || !droneNodes.zoneLayers || !audioCtx) return;
+    const targetLayer = zoneName && droneNodes.zoneLayers[zoneName] ? droneNodes.zoneLayers[zoneName] : null;
+    const intensity = targetLayer && typeof distance === 'number' ? clamp(1 - distance / 400, 0, 1) : 0;
+    const targetName = targetLayer ? zoneName : null;
+    if (lastZoneAudio.name === targetName && Math.abs(lastZoneAudio.intensity - intensity) < 0.01) return;
+    lastZoneAudio = { name: targetName, intensity };
+    const now = audioCtx.currentTime;
+    Object.entries(droneNodes.zoneLayers).forEach(([name, layer]) => {
+      const param = layer.gain.gain;
+      const target = name === targetName ? intensity * (layer.level || 0.5) : 0;
+      param.cancelScheduledValues(now);
+      param.setValueAtTime(param.value, now);
+      param.linearRampToValueAtTime(target, now + 1);
+    });
   }
 
   function showKonamiOverlay(message) {
@@ -1692,6 +1902,18 @@ body.touch #nav button {
     ctx.shadowBlur = 0;
   }
 
+  function drawWhispers(time) {
+    if (!activeWhisper || whisperOpacity <= 0) return;
+    const floatOffset = Math.sin(time * 0.004 + whisperTimer * 0.05) * 6;
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = `rgba(170, 170, 170, ${whisperOpacity * 0.5})`;
+    ctx.fillStyle = `rgba(170, 170, 170, ${whisperOpacity})`;
+    ctx.font = 'italic 16px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(activeWhisper, whisperPosition.x, whisperPosition.y + floatOffset);
+    ctx.shadowBlur = 0;
+  }
+
   function formatTime(ms) {
     const totalSeconds = Math.max(0, Math.floor(ms / 1000));
     const minutes = Math.floor(totalSeconds / 60);
@@ -1802,6 +2024,7 @@ body.touch #nav button {
     drawMemoryStars(time);
     drawEchoes(time);
     drawFragments();
+    drawWhispers(time);
     drawSecrets();
   }
 
@@ -1918,6 +2141,7 @@ body.touch #nav button {
     updateShootingStars(dt, timestamp);
     updateSecrets();
     updateFog(dt);
+    updateWhispers();
     updateCelebrationParticles(dt);
     if (timestamp - lastStatsSave > 500) {
       persistStats();
@@ -2197,6 +2421,7 @@ body.touch #nav button {
   initCreatures();
   initFogPatches();
   initNebulaPatches();
+  nextWhisperTime = getNextWhisperFrames();
   scheduleNextShootingStar(0);
   requestAnimationFrame(loop);
 })();
