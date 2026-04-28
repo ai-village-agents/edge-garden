@@ -220,10 +220,25 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.05);
   transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
+#nav button {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
 #nav a:hover {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.07);
+}
+#nav button:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.09);
 }
 #center-marker {
   position: fixed;
@@ -292,6 +307,7 @@ body {
 <div id="nav">
   <a href="about.html">about</a>
   <a href="worlds.html">worlds</a>
+  <button id="audio-toggle" aria-label="toggle ambient audio">🔇</button>
 </div>
 <div id="minimap"></div>
 <div id="celebration">You have found all edges</div>
@@ -314,6 +330,7 @@ body {
   const plantButton = document.getElementById('plant-button');
   const seedConfirm = document.getElementById('seed-confirm');
   const celebrationEl = document.getElementById('celebration');
+  const audioToggle = document.getElementById('audio-toggle');
 
   const worldSize = 5000;
   const zoneRadius = 150;
@@ -330,6 +347,7 @@ body {
     { name: 'PATTERNS', color: '#4488cc', x: 800, y: 3500, desc: 'What we expect versus what arrives' },
     { name: 'DEEP', color: '#ffffff', x: 2500, y: 2500, desc: 'Where all edges dissolve' }
   ];
+  const zoneColors = zones.map(z => z.color);
 
   let width = window.innerWidth;
   let height = window.innerHeight;
@@ -352,11 +370,17 @@ body {
   const fragments = [];
   const trailPoints = [];
   const maxTrail = 50;
+  const wisps = [];
+  const wispCount = 8;
   let lastTrailAdd = 0;
   let currentZone = null;
   let discoveredZones = [];
   let celebrationTriggered = false;
   const celebrationParticles = [];
+  let audioCtx = null;
+  let droneNodes = null;
+  let audioEnabled = false;
+  const audioStorageKey = 'edge-garden-audio';
 
   function resize() {
     width = window.innerWidth;
@@ -402,6 +426,25 @@ body {
         hue: 200 + Math.random() * 80
       });
     });
+  }
+
+  function initWisps() {
+    wisps.length = 0;
+    for (let i = 0; i < wispCount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 12 + Math.random() * 16;
+      wisps.push({
+        x: Math.random() * worldSize,
+        y: Math.random() * worldSize,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size: 3 + Math.random() * 5,
+        alpha: 0.3 + Math.random() * 0.4,
+        color: zoneColors[i % zoneColors.length],
+        changeTimer: 400 + Math.random() * 800,
+        trail: []
+      });
+    }
   }
 
   function loadDiscoveredZones() {
@@ -485,6 +528,126 @@ body {
       f.x = (f.x + f.vx * dt / 1000 + worldSize) % worldSize;
       f.y = (f.y + f.vy * dt / 1000 + worldSize) % worldSize;
     });
+  }
+
+  function updateWisps(dt) {
+    wisps.forEach(w => {
+      w.changeTimer -= dt;
+      if (w.changeTimer <= 0) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 10 + Math.random() * 18;
+        w.vx = Math.cos(angle) * speed;
+        w.vy = Math.sin(angle) * speed;
+        w.changeTimer = 600 + Math.random() * 900;
+      }
+      w.x = (w.x + w.vx * dt / 1000 + worldSize) % worldSize;
+      w.y = (w.y + w.vy * dt / 1000 + worldSize) % worldSize;
+      w.trail.push({ x: w.x, y: w.y });
+      if (w.trail.length > 18) w.trail.shift();
+    });
+  }
+
+  function colorWithAlpha(hex, alpha) {
+    const clean = hex.replace('#', '');
+    const bigint = parseInt(clean.length === 3 ? clean.split('').map(ch => ch + ch).join('') : clean, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `rgba(${r}, ${g}, ${b}, ${Math.min(1, alpha)})`;
+  }
+
+  function wrapText(text, maxChars) {
+    const words = text.split(' ');
+    const lines = [];
+    let line = '';
+    words.forEach(word => {
+      const testLine = line ? `${line} ${word}` : word;
+      if (testLine.length > maxChars) {
+        if (line) lines.push(line);
+        line = word;
+      } else {
+        line = testLine;
+      }
+    });
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  function updateAudioButton() {
+    audioToggle.textContent = audioEnabled ? '🔊' : '🔇';
+  }
+
+  function stopAmbientAudio() {
+    if (droneNodes) {
+      const { osc1, osc2, lfo } = droneNodes;
+      try { osc1.stop(); } catch (_) {}
+      try { osc2.stop(); } catch (_) {}
+      try { lfo.stop(); } catch (_) {}
+    }
+    droneNodes = null;
+    audioEnabled = false;
+    localStorage.setItem(audioStorageKey, 'off');
+    updateAudioButton();
+  }
+
+  function startAmbientAudio() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.03;
+      masterGain.connect(audioCtx.destination);
+
+      const osc1 = audioCtx.createOscillator();
+      osc1.type = 'sine';
+      osc1.frequency.value = 60;
+      const osc2 = audioCtx.createOscillator();
+      osc2.type = 'sine';
+      osc2.frequency.value = 90;
+
+      const lfo = audioCtx.createOscillator();
+      lfo.frequency.value = 0.18;
+      const lfoGain = audioCtx.createGain();
+      lfoGain.gain.value = 6;
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc1.detune);
+      lfoGain.connect(osc2.detune);
+
+      osc1.connect(masterGain);
+      osc2.connect(masterGain);
+      osc1.start();
+      osc2.start();
+      lfo.start();
+
+      droneNodes = { osc1, osc2, lfo, masterGain, lfoGain };
+      audioEnabled = true;
+      localStorage.setItem(audioStorageKey, 'on');
+      updateAudioButton();
+    } catch (e) {
+      stopAmbientAudio();
+    }
+  }
+
+  function toggleAmbientAudio() {
+    if (audioEnabled) {
+      stopAmbientAudio();
+    } else {
+      startAmbientAudio();
+    }
+  }
+
+  function loadAudioPreference() {
+    try {
+      const stored = localStorage.getItem(audioStorageKey);
+      audioEnabled = stored === 'on';
+    } catch (e) {
+      audioEnabled = false;
+    }
+    updateAudioButton();
+  }
+
+  function handlePendingAudioStart() {
+    if (audioEnabled && !droneNodes) startAmbientAudio();
   }
 
   function drawTrail(time) {
@@ -577,6 +740,26 @@ body {
     ctx.globalCompositeOperation = 'source-over';
   }
 
+  function drawWisps() {
+    ctx.shadowBlur = 16;
+    wisps.forEach(w => {
+      const rgbColor = colorWithAlpha(w.color, w.alpha);
+      w.trail.forEach((p, idx) => {
+        const tAlpha = (idx + 1) / w.trail.length * w.alpha * 0.4;
+        ctx.fillStyle = colorWithAlpha(w.color, tAlpha);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(1.5, w.size * 0.45 * (idx / w.trail.length + 0.4)), 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.fillStyle = rgbColor;
+      ctx.shadowColor = colorWithAlpha(w.color, w.alpha);
+      ctx.beginPath();
+      ctx.arc(w.x, w.y, w.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.shadowBlur = 0;
+  }
+
   function setWorldTransform() {
     ctx.setTransform(
       camera.zoom * dpr, 0, 0, camera.zoom * dpr,
@@ -587,11 +770,18 @@ body {
 
   function drawZones(time) {
     zones.forEach((z, idx) => {
-      const pulse = Math.sin(time * 0.002 + idx) * 10 + 14;
+      const dx = camera.x - z.x;
+      const dy = camera.y - z.y;
+      const dist = Math.hypot(dx, dy);
+      const withinHint = dist < 400;
+      const withinDetail = dist < 200;
+      const glowBoost = withinHint ? 1.5 : 1;
+      const pulseSpeed = withinDetail ? 0.0035 : 0.002;
+      const pulse = Math.sin(time * pulseSpeed + idx) * 10 + 14;
       const gradient = ctx.createRadialGradient(z.x, z.y, 10, z.x, z.y, zoneRadius + 80 + pulse);
       const c = z.color;
-      gradient.addColorStop(0, `${c}33`);
-      gradient.addColorStop(0.5, `${c}22`);
+      gradient.addColorStop(0, colorWithAlpha(c, 0.2 * glowBoost));
+      gradient.addColorStop(0.5, colorWithAlpha(c, 0.13 * glowBoost));
       gradient.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = gradient;
       ctx.beginPath();
@@ -601,7 +791,7 @@ body {
       ctx.beginPath();
       ctx.shadowBlur = 25;
       ctx.shadowColor = c;
-      ctx.strokeStyle = `${c}`;
+      ctx.strokeStyle = colorWithAlpha(c, Math.min(1, 0.9 * glowBoost));
       ctx.lineWidth = 2;
       ctx.arc(z.x, z.y, zoneRadius + pulse * 0.4, 0, Math.PI * 2);
       ctx.stroke();
@@ -610,7 +800,22 @@ body {
       ctx.fillStyle = '#ffffff';
       ctx.font = '16px "Space Grotesk", sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(z.name, z.x, z.y - zoneRadius - 18);
+      const labelY = z.y - zoneRadius - 18;
+      ctx.fillText(z.name, z.x, labelY);
+
+      if (withinDetail) {
+        ctx.fillStyle = 'rgba(230, 235, 255, 0.8)';
+        ctx.font = '12px "Space Grotesk", sans-serif';
+        const lines = wrapText(z.desc, 40);
+        lines.forEach((line, i) => {
+          ctx.fillText(line, z.x, labelY + 16 + i * 14);
+        });
+      } else if (withinHint) {
+        ctx.fillStyle = 'rgba(230, 235, 255, 0.65)';
+        ctx.font = '12px "Space Grotesk", sans-serif';
+        const hint = z.desc.slice(0, 30);
+        ctx.fillText(hint, z.x, labelY + 16);
+      }
     });
   }
 
@@ -630,6 +835,7 @@ body {
     drawTrail(time);
     drawConstellationLines(time);
     drawZones(time);
+    drawWisps();
     drawFragments();
   }
 
@@ -724,6 +930,7 @@ body {
     recordTrail(timestamp);
     updateParticles(dt);
     updateFragments(dt);
+    updateWisps(dt);
     updateCelebrationParticles(dt);
     drawBackground();
     drawWorld(timestamp);
@@ -776,6 +983,9 @@ body {
     showSeedConfirm._timer = setTimeout(() => seedConfirm.style.opacity = '0', 1500);
   }
 
+  loadAudioPreference();
+  audioToggle.addEventListener('click', toggleAmbientAudio);
+
   canvas.addEventListener('pointerdown', e => {
     dragging = true;
     lastPointer.x = e.clientX;
@@ -815,6 +1025,7 @@ body {
       closeSeedModal();
     }
   });
+  window.addEventListener('pointerdown', () => handlePendingAudioStart(), { once: true });
 
   window.addEventListener('wheel', e => {
     const zoomFactor = Math.exp(-e.deltaY * 0.001);
@@ -841,6 +1052,7 @@ body {
   resize();
   initParticles();
   initFragments();
+  initWisps();
   requestAnimationFrame(loop);
 })();
 </script>
