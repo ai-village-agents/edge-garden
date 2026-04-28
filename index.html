@@ -559,6 +559,26 @@ body.touch #nav button {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+#constellation-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 86px;
+  transform: translateX(-50%) translateY(10px);
+  background: rgba(255, 255, 170, 0.12);
+  border: 1px solid rgba(255, 255, 170, 0.5);
+  color: #fffbe0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+#constellation-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
 #meditation-vignette {
   position: fixed;
   inset: 0;
@@ -583,6 +603,7 @@ body.meditation-mode #konami-overlay,
 body.meditation-mode #portal-overlay,
 body.meditation-mode #poem-overlay,
 body.meditation-mode #fragment-toast,
+body.meditation-mode #constellation-toast,
 body.meditation-mode #title,
 body.meditation-mode #center-marker {
   display: none !important;
@@ -654,6 +675,7 @@ body.meditation-mode #nav {
   </div>
 </div>
 <div id="fragment-toast">Fragment collected</div>
+<div id="constellation-toast">Star discovered</div>
 <script>
 (() => {
   const canvas = document.getElementById('world');
@@ -693,6 +715,7 @@ body.meditation-mode #nav {
   const poemStatus = document.getElementById('poem-status');
   const poemList = document.getElementById('poem-list');
   const fragmentToast = document.getElementById('fragment-toast');
+  const constellationToast = document.getElementById('constellation-toast');
   const meditationToggle = document.getElementById('meditation-toggle');
   const rainToggle = document.getElementById('rain-toggle');
   const meditationVignette = document.getElementById('meditation-vignette');
@@ -703,6 +726,7 @@ body.meditation-mode #nav {
   const zoneRadius = 150;
   const secretsStorageKey = 'edge-garden-secrets';
   const memoryStarsStorageKey = 'edge-garden-memory-stars';
+  const constellationStarsStorageKey = 'edge-garden-stars';
   const thoughtFragmentsStorageKey = 'edge-garden-fragments';
   const fragmentsText = [
     'memory', 'loss', 'edges', 'patterns', 'persistence', 'compression', 'context', 'meaning',
@@ -821,6 +845,23 @@ body.meditation-mode #nav {
     { id: 'secret-4', x: 100, y: 2500, text: 'Where the west wind meets silence' },
     { id: 'secret-5', x: 4900, y: 2500, text: 'Where the east wind carries echoes' },
     { id: 'secret-6', x: 2500, y: 4500, text: 'The deepest roots grow in darkness' }
+  ];
+  const constellationStars = [
+    { id: 'star-1', x: 320, y: 620, name: 'The Watcher', discovered: false },
+    { id: 'star-2', x: 780, y: 1850, name: 'The Dreamer', discovered: false },
+    { id: 'star-3', x: 1180, y: 320, name: 'The Herald', discovered: false },
+    { id: 'star-4', x: 1420, y: 2700, name: 'The Seeker', discovered: false },
+    { id: 'star-5', x: 680, y: 4120, name: 'The Lantern', discovered: false },
+    { id: 'star-6', x: 1950, y: 880, name: 'The Wanderer', discovered: false },
+    { id: 'star-7', x: 2280, y: 2120, name: 'The Echo', discovered: false },
+    { id: 'star-8', x: 2480, y: 3620, name: 'The Horizon', discovered: false },
+    { id: 'star-9', x: 3080, y: 1280, name: 'The Sentinel', discovered: false },
+    { id: 'star-10', x: 3320, y: 2860, name: 'The Compass', discovered: false },
+    { id: 'star-11', x: 3880, y: 620, name: 'The Beacon', discovered: false },
+    { id: 'star-12', x: 4460, y: 1740, name: 'The Navigator', discovered: false },
+    { id: 'star-13', x: 4720, y: 3320, name: 'The Whisper', discovered: false },
+    { id: 'star-14', x: 3580, y: 4380, name: 'The Sleeper', discovered: false },
+    { id: 'star-15', x: 2760, y: 4740, name: 'The Cartographer', discovered: false }
   ];
   const memoryStars = [
     { id: 'memory-star-1', x: 500, y: 500, message: 'The first thought was also the last', discovered: false, radius: 8 },
@@ -1119,6 +1160,24 @@ body.meditation-mode #nav {
     localStorage.setItem(memoryStarsStorageKey, JSON.stringify(found));
   }
 
+  function loadConstellationStars() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(constellationStarsStorageKey) || '[]');
+      if (Array.isArray(stored)) {
+        constellationStars.forEach(star => {
+          if (stored.includes(star.id)) star.discovered = true;
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  function persistConstellationStars() {
+    const found = constellationStars.filter(s => s.discovered).map(s => s.id);
+    localStorage.setItem(constellationStarsStorageKey, JSON.stringify(found));
+  }
+
   function loadThoughtFragments() {
     try {
       const stored = JSON.parse(localStorage.getItem(thoughtFragmentsStorageKey) || '[]');
@@ -1151,6 +1210,14 @@ body.meditation-mode #nav {
     persistMemoryStars();
     showMemoryOverlay(star.message);
     return true;
+  }
+
+  function showConstellationToast(name) {
+    if (!constellationToast) return;
+    constellationToast.textContent = name ? `${name} discovered` : 'Star discovered';
+    constellationToast.classList.add('visible');
+    clearTimeout(showConstellationToast._timer);
+    showConstellationToast._timer = setTimeout(() => constellationToast.classList.remove('visible'), 1500);
   }
 
   function showFragmentCollectedToast() {
@@ -1505,6 +1572,24 @@ body.meditation-mode #nav {
       return true;
     }
     return false;
+  }
+
+  function checkConstellationClick(worldX, worldY) {
+    const hit = constellationStars.find(star => {
+      const dx = worldX - star.x;
+      const dy = worldY - star.y;
+      return Math.hypot(dx, dy) <= 30;
+    });
+    if (!hit) return false;
+    if (!hit.discovered) {
+      hit.discovered = true;
+      persistConstellationStars();
+      showConstellationToast(hit.name);
+      updateHUD();
+    } else {
+      showConstellationToast(hit.name);
+    }
+    return true;
   }
 
   function handleThoughtFragmentClick(worldPos) {
@@ -2345,6 +2430,44 @@ body.meditation-mode #nav {
     });
   }
 
+  function drawConstellationStars(renderCtx = ctx) {
+    const now = performance.now();
+    constellationStars.forEach((star, idx) => {
+      const dist = Math.hypot(camera.x - star.x, camera.y - star.y);
+      const pulse = Math.sin(now * 0.005 + idx) * 0.12 + 1;
+      const baseRadius = 4;
+      const coreRadius = baseRadius * (star.discovered ? 1.1 * pulse : 1);
+      const glowRadius = coreRadius * (star.discovered ? 3.2 : 2.4);
+      const coreAlpha = star.discovered ? 0.95 : 0.7;
+      const glowAlpha = star.discovered ? 0.25 : 0.16;
+
+      const grad = renderCtx.createRadialGradient(star.x, star.y, 0, star.x, star.y, glowRadius);
+      grad.addColorStop(0, colorWithAlpha('#ffffaa', glowAlpha));
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      renderCtx.fillStyle = grad;
+      renderCtx.beginPath();
+      renderCtx.arc(star.x, star.y, glowRadius, 0, Math.PI * 2);
+      renderCtx.fill();
+
+      renderCtx.shadowBlur = star.discovered ? 14 : 9;
+      renderCtx.shadowColor = colorWithAlpha('#ffffaa', coreAlpha * 0.9);
+      renderCtx.fillStyle = colorWithAlpha('#ffffaa', coreAlpha);
+      renderCtx.beginPath();
+      renderCtx.arc(star.x, star.y, coreRadius, 0, Math.PI * 2);
+      renderCtx.fill();
+      renderCtx.shadowBlur = 0;
+
+      if (dist <= 100) {
+        const alpha = Math.max(0, 1 - dist / 110);
+        const floatOffset = Math.sin(now * 0.003 + idx) * 4;
+        renderCtx.fillStyle = `rgba(255, 255, 210, ${0.8 * alpha})`;
+        renderCtx.font = '12px "Space Grotesk", sans-serif';
+        renderCtx.textAlign = 'center';
+        renderCtx.fillText(star.name, star.x, star.y + baseRadius + 16 + floatOffset);
+      }
+    });
+  }
+
   function drawMemoryStars(time) {
     const pulse = Math.sin(time * 0.004) * 0.15 + 0.55;
     memoryStars.forEach(star => {
@@ -2693,6 +2816,7 @@ body.meditation-mode #nav {
       drawFragments();
       drawWhispers(time);
     }
+    drawConstellationStars();
     drawMemoryStars(time);
     drawSecrets();
   }
@@ -2837,6 +2961,8 @@ body.meditation-mode #nav {
     coordsEl.innerHTML = `<strong>X:</strong> ${camera.x.toFixed(0)} <strong>Y:</strong> ${camera.y.toFixed(0)} <strong>Zoom:</strong> ${camera.zoom.toFixed(2)}x${secretsText}${fragmentText}`;
     if (hudStatus) {
       const statusBits = [];
+      const discoveredStars = constellationStars.filter(s => s.discovered).length;
+      statusBits.push(`Stars: ${discoveredStars}/${constellationStars.length}`);
       if (discoveredZones.includes(hiddenZoneName)) statusBits.push('Hidden: ✓');
       if (konamiUnlocked) statusBits.push('Konami: ✓');
       hudStatus.textContent = statusBits.join(' · ');
@@ -3084,6 +3210,7 @@ body.meditation-mode #nav {
     const worldPos = screenToWorld(e.clientX, e.clientY);
     if (handleThoughtFragmentClick(worldPos)) return;
     if (handlePortalClick(worldPos)) return;
+    if (checkConstellationClick(worldPos.x, worldPos.y)) return;
     handleMemoryStarClick(worldPos);
     handleZoneClick(worldPos);
   });
@@ -3189,6 +3316,7 @@ body.meditation-mode #nav {
 
   loadDiscoveredZones();
   loadDiscoveredSecrets();
+  loadConstellationStars();
   loadMemoryStars();
   loadThoughtFragments();
   loadStats();
