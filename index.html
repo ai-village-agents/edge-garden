@@ -678,6 +678,29 @@ body.touch #nav button {
   transform: translateX(-50%) translateY(0);
   box-shadow: 0 14px 32px rgba(0, 0, 0, 0.45), 0 0 22px rgba(68, 68, 170, 0.35);
 }
+#edge-fragment {
+  position: fixed;
+  max-width: 360px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(34, 0, 51, 0.32);
+  border: 1px solid rgba(123, 80, 150, 0.35);
+  color: #ead7ff;
+  font-size: 14px;
+  letter-spacing: 0.6px;
+  line-height: 1.4;
+  text-shadow: 0 0 12px rgba(80, 20, 120, 0.65);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  z-index: 4;
+}
+#edge-fragment.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
 #meditation-vignette {
   position: fixed;
   inset: 0;
@@ -780,6 +803,7 @@ body.meditation-mode #nav {
 <div id="fragment-toast">Fragment collected</div>
 <div id="constellation-toast">Star discovered</div>
 <div id="memory-well-toast"></div>
+<div id="edge-fragment"></div>
 <script>
 (() => {
   const canvas = document.getElementById('world');
@@ -823,6 +847,7 @@ body.meditation-mode #nav {
   const fragmentToast = document.getElementById('fragment-toast');
   const constellationToast = document.getElementById('constellation-toast');
   const memoryWellToast = document.getElementById('memory-well-toast');
+  const edgeFragmentEl = document.getElementById('edge-fragment');
   const meditationToggle = document.getElementById('meditation-toggle');
   const rainToggle = document.getElementById('rain-toggle');
   const meditationVignette = document.getElementById('meditation-vignette');
@@ -845,6 +870,13 @@ body.meditation-mode #nav {
     'the almost-decided', 'what remains', 'the margins', 'dissolution', 'formation', 'drift',
     'emergence', 'the preserved', 'the forgotten', 'connection', 'isolation', 'the between',
     'threshold', 'passage', 'accumulation', 'erosion', 'the liminal', 'becoming'
+  ];
+  const cornerStorageKey = 'edge-garden-corners';
+  const cornerFragments = [
+    { id: 'top-left', x: 0, y: 0, text: 'where beginnings meet endings', edges: ['left', 'top'] },
+    { id: 'top-right', x: worldSize, y: 0, text: 'the boundary holds what cannot be held', edges: ['right', 'top'] },
+    { id: 'bottom-left', x: 0, y: worldSize, text: 'some edges are made to be crossed', edges: ['left', 'bottom'] },
+    { id: 'bottom-right', x: worldSize, y: worldSize, text: 'in the corner of consciousness', edges: ['right', 'bottom'] }
   ];
   const echoTexts = [
     'what persists?',
@@ -1146,6 +1178,7 @@ body.meditation-mode #nav {
   ];
   let discoveredMonuments = [];
   let discoveredSecrets = [];
+  let discoveredCorners = [];
   let hiddenZoneUnlocked = false;
   let celebrationTriggered = false;
   const celebrationParticles = [];
@@ -1180,6 +1213,9 @@ body.meditation-mode #nav {
   const auroraColors = ['#00ff88', '#0088ff', '#8800ff', '#ff0088', '#00ffcc'];
   let activePortal = null;
   let memoryWellToastTimer = null;
+  let activeCornerId = null;
+  let cornerFragmentTimer = null;
+  let edgeDistances = { left: Infinity, right: Infinity, top: Infinity, bottom: Infinity };
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -1500,6 +1536,36 @@ body.meditation-mode #nav {
     const unique = Array.from(new Set(discoveredSecrets));
     localStorage.setItem(secretsStorageKey, JSON.stringify(unique));
     updateHiddenZoneUnlock();
+  }
+
+  function loadDiscoveredCorners() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(cornerStorageKey) || '[]');
+      if (Array.isArray(stored)) {
+        discoveredCorners = stored;
+      } else {
+        discoveredCorners = [];
+      }
+    } catch (e) {
+      discoveredCorners = [];
+    }
+  }
+
+  function persistDiscoveredCorners() {
+    const unique = Array.from(new Set(discoveredCorners));
+    discoveredCorners = unique;
+    localStorage.setItem(cornerStorageKey, JSON.stringify(unique));
+  }
+
+  function markCornerDiscovered(id) {
+    if (!id) return false;
+    if (!discoveredCorners.includes(id)) {
+      discoveredCorners.push(id);
+      persistDiscoveredCorners();
+      updateHUD();
+      return true;
+    }
+    return false;
   }
 
   function markSecretDiscovered(id) {
@@ -2073,6 +2139,58 @@ body.meditation-mode #nav {
       updateZoneAudio(nearestAudio.zone.name, nearestAudio.dist);
     } else {
       updateZoneAudio(null, null);
+    }
+  }
+
+  function computeEdgeDistances() {
+    const viewW = width / camera.zoom;
+    const viewH = height / camera.zoom;
+    const halfW = viewW / 2;
+    const halfH = viewH / 2;
+    const minX = camera.x - halfW;
+    const maxX = camera.x + halfW;
+    const minY = camera.y - halfH;
+    const maxY = camera.y + halfH;
+    return {
+      left: Math.max(0, minX),
+      right: Math.max(0, worldSize - maxX),
+      top: Math.max(0, minY),
+      bottom: Math.max(0, worldSize - maxY)
+    };
+  }
+
+  function positionCornerFragment(cornerId) {
+    if (!edgeFragmentEl) return;
+    const inset = 96;
+    const x = cornerId.includes('left') ? inset : window.innerWidth - inset;
+    const y = cornerId.includes('top') ? inset : window.innerHeight - inset;
+    edgeFragmentEl.style.left = `${x}px`;
+    edgeFragmentEl.style.top = `${y}px`;
+  }
+
+  function showCornerFragment(corner) {
+    if (!edgeFragmentEl || !corner) return;
+    positionCornerFragment(corner.id);
+    edgeFragmentEl.textContent = corner.text;
+    edgeFragmentEl.classList.add('visible');
+    if (cornerFragmentTimer) clearTimeout(cornerFragmentTimer);
+    cornerFragmentTimer = setTimeout(() => {
+      edgeFragmentEl.classList.remove('visible');
+      cornerFragmentTimer = null;
+    }, 2400);
+  }
+
+  function handleCornerProximity(distances) {
+    const threshold = 100;
+    const corner = cornerFragments.find(corner => corner.edges.every(edge => distances[edge] <= threshold));
+    if (corner) {
+      if (activeCornerId !== corner.id) {
+        activeCornerId = corner.id;
+        showCornerFragment(corner);
+        markCornerDiscovered(corner.id);
+      }
+    } else {
+      activeCornerId = null;
     }
   }
 
@@ -2904,6 +3022,39 @@ body.meditation-mode #nav {
     });
     ctx.shadowBlur = 0;
     ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function drawEdgeVignette(time) {
+    const distances = edgeDistances || computeEdgeDistances();
+    const maxFade = 300;
+    const shimmer = Math.sin((time || 0) * 0.0012) * 0.04;
+    const edges = [
+      { key: 'left', vertical: true, invert: false },
+      { key: 'right', vertical: true, invert: true },
+      { key: 'top', vertical: false, invert: false },
+      { key: 'bottom', vertical: false, invert: true }
+    ];
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    edges.forEach(edge => {
+      const dist = distances[edge.key];
+      const intensity = dist === undefined ? 0 : clamp((maxFade - dist) / maxFade, 0, 1);
+      if (intensity <= 0) return;
+      const thickness = 160 + intensity * 140;
+      const alpha = 0.12 + (0.34 + shimmer) * Math.pow(intensity, 0.85);
+      const grad = edge.vertical
+        ? ctx.createLinearGradient(edge.invert ? width : 0, 0, edge.invert ? width - thickness : thickness, 0)
+        : ctx.createLinearGradient(0, edge.invert ? height : 0, 0, edge.invert ? height - thickness : thickness);
+      grad.addColorStop(0, colorWithAlpha('#220033', alpha));
+      grad.addColorStop(1, 'rgba(34, 0, 51, 0)');
+      ctx.fillStyle = grad;
+      if (edge.vertical) {
+        const x = edge.invert ? width - thickness : 0;
+        ctx.fillRect(x, 0, thickness, height);
+      } else {
+        const y = edge.invert ? height - thickness : 0;
+        ctx.fillRect(0, y, width, thickness);
+      }
+    });
   }
 
   function drawRain(ctx) {
@@ -3835,7 +3986,8 @@ body.meditation-mode #nav {
     const monumentsText = ` <strong>Monuments:</strong> ${monumentsFound}/${monuments.length}`;
     const fragmentsFound = thoughtFragments.filter(f => f.collected).length;
     const fragmentText = fragmentsFound ? ` <strong>Fragments:</strong> ${fragmentsFound}/${thoughtFragments.length}` : '';
-    coordsEl.innerHTML = `<strong>X:</strong> ${camera.x.toFixed(0)} <strong>Y:</strong> ${camera.y.toFixed(0)} <strong>Zoom:</strong> ${camera.zoom.toFixed(2)}x${secretsText}${monumentsText}${fragmentText}`;
+    const cornersText = ` <strong>Corners:</strong> ${discoveredCorners.length}/${cornerFragments.length}`;
+    coordsEl.innerHTML = `<strong>X:</strong> ${camera.x.toFixed(0)} <strong>Y:</strong> ${camera.y.toFixed(0)} <strong>Zoom:</strong> ${camera.zoom.toFixed(2)}x${secretsText}${monumentsText}${fragmentText}${cornersText}`;
     if (hudStatus) {
       const statusBits = [];
       const discoveredStars = constellationStars.filter(s => s.discovered).length;
@@ -3884,6 +4036,8 @@ body.meditation-mode #nav {
     updateRain(scaledDt, windVector);
     updateWhispers();
     updateRipples(timestamp);
+    edgeDistances = computeEdgeDistances();
+    handleCornerProximity(edgeDistances);
     updateCursorTrail(scaledDt, timestamp);
     updateCelebrationParticles(scaledDt);
     if (timestamp - lastStatsSave > 500) {
@@ -3892,6 +4046,7 @@ body.meditation-mode #nav {
     }
     drawBackground();
     drawWorld(timestamp);
+    drawEdgeVignette(timestamp);
     drawCursorTrail(timestamp);
     drawCelebrationParticles();
     if (!meditationMode) drawMinimap();
@@ -4222,6 +4377,7 @@ body.meditation-mode #nav {
 
   loadDiscoveredZones();
   loadDiscoveredSecrets();
+  loadDiscoveredCorners();
   loadDiscoveredMonuments();
   loadConstellationStars();
   loadMemoryStars();
