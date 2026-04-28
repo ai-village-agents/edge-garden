@@ -485,6 +485,14 @@ body.touch #nav button {
   const trailPoints = [];
   const maxTrail = 50;
   const wisps = [];
+  const creatures = [];
+  const creatureCount = 25;
+  const creatureTypes = ['moth', 'firefly', 'echomote'];
+  const creatureColors = {
+    moth: '#ffcc88',
+    firefly: '#88ffaa',
+    echomote: '#aaccff'
+  };
   const wispCount = 8;
   let lastTrailAdd = 0;
   let currentZone = null;
@@ -608,6 +616,27 @@ body.touch #nav button {
         color: zoneColors[i % zoneColors.length],
         changeTimer: 400 + Math.random() * 800,
         trail: []
+      });
+    }
+  }
+
+  function initCreatures() {
+    creatures.length = 0;
+    for (let i = 0; i < creatureCount; i++) {
+      const type = creatureTypes[Math.floor(Math.random() * creatureTypes.length)];
+      creatures.push({
+        x: Math.random() * worldSize,
+        y: Math.random() * worldSize,
+        vx: (Math.random() * 0.3) - 0.15,
+        vy: (Math.random() * 0.3) - 0.15,
+        size: 2 + Math.random() * 3,
+        type,
+        color: creatureColors[type],
+        phase: Math.random() * Math.PI * 2,
+        blinkRate: 0.02 + Math.random() * 0.03,
+        awareness: 150 + Math.random() * 100,
+        fleeing: false,
+        fleeTimer: 0
       });
     }
   }
@@ -838,6 +867,64 @@ body.touch #nav button {
       w.y = (w.y + w.vy * dt / 1000 + worldSize) % worldSize;
       w.trail.push({ x: w.x, y: w.y });
       if (w.trail.length > 18) w.trail.shift();
+    });
+  }
+
+  function updateCreatures(dt) {
+    const player = { x: camera.x, y: camera.y };
+    const dtFactor = dt / 16.6667;
+    creatures.forEach(creature => {
+      const dx = player.x - creature.x;
+      const dy = player.y - creature.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist > 0 && dist < creature.awareness) {
+        if (creature.type === 'moth') {
+          creature.vx += dx * 0.0001 * dtFactor;
+          creature.vy += dy * 0.0001 * dtFactor;
+        } else if (creature.type === 'firefly') {
+          const repel = 0.02 * dtFactor;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          creature.vx -= nx * repel;
+          creature.vy -= ny * repel;
+          creature.fleeing = true;
+          creature.fleeTimer = 60;
+        } else if (creature.type === 'echomote') {
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const orbitStrength = 0.012 * dtFactor;
+          creature.vx += -ny * orbitStrength;
+          creature.vy += nx * orbitStrength;
+        }
+      }
+
+      const drift = 0.01 * dtFactor;
+      creature.vx += (Math.random() - 0.5) * drift;
+      creature.vy += (Math.random() - 0.5) * drift;
+
+      creature.vx *= 0.98;
+      creature.vy *= 0.98;
+
+      const speed = Math.hypot(creature.vx, creature.vy);
+      if (speed > 1.5) {
+        const scale = 1.5 / speed;
+        creature.vx *= scale;
+        creature.vy *= scale;
+      }
+
+      creature.x = (creature.x + creature.vx * dt / 1000 + worldSize) % worldSize;
+      creature.y = (creature.y + creature.vy * dt / 1000 + worldSize) % worldSize;
+      creature.phase += creature.blinkRate * dtFactor;
+      if (creature.phase > Math.PI * 2) creature.phase -= Math.PI * 2;
+
+      if (creature.fleeTimer > 0) {
+        creature.fleeTimer -= dtFactor;
+        if (creature.fleeTimer <= 0) {
+          creature.fleeTimer = 0;
+          creature.fleeing = false;
+        }
+      }
     });
   }
 
@@ -1178,6 +1265,44 @@ body.touch #nav button {
     ctx.shadowBlur = 0;
   }
 
+  function drawCreatures() {
+    const viewW = width / camera.zoom;
+    const viewH = height / camera.zoom;
+    const halfW = viewW / 2;
+    const halfH = viewH / 2;
+    creatures.forEach(creature => {
+      const radius = creature.size * 3;
+      if (
+        creature.x < camera.x - halfW - radius ||
+        creature.x > camera.x + halfW + radius ||
+        creature.y < camera.y - halfH - radius ||
+        creature.y > camera.y + halfH + radius
+      ) {
+        return;
+      }
+      const baseBrightness = (Math.sin(creature.phase) + 1) * 0.5;
+      const fleeBoost = creature.fleeing ? 0.5 : 0;
+      const brightness = Math.min(1.2, baseBrightness + fleeBoost);
+
+      const glow = ctx.createRadialGradient(creature.x, creature.y, 0, creature.x, creature.y, radius);
+      glow.addColorStop(0, colorWithAlpha(creature.color, 0.5 * brightness));
+      glow.addColorStop(1, colorWithAlpha(creature.color, 0));
+      ctx.fillStyle = glow;
+      ctx.shadowBlur = 18 * brightness;
+      ctx.shadowColor = colorWithAlpha(creature.color, 0.6 * brightness);
+      ctx.beginPath();
+      ctx.arc(creature.x, creature.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      const coreAlpha = Math.min(1, 0.5 + brightness * 0.5 + (creature.fleeTimer > 0 ? 0.2 : 0));
+      ctx.fillStyle = colorWithAlpha(creature.color, coreAlpha);
+      ctx.beginPath();
+      ctx.arc(creature.x, creature.y, creature.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
   function drawSecrets() {
     secrets.forEach(secret => {
       const dist = Math.hypot(camera.x - secret.x, camera.y - secret.y);
@@ -1414,6 +1539,7 @@ body.touch #nav button {
     drawConstellationLines(time);
     drawZones(time);
     drawWisps();
+    drawCreatures();
     drawEchoes(time);
     drawFragments();
     drawSecrets();
@@ -1523,6 +1649,7 @@ body.touch #nav button {
     updateFragments(dt);
     updateEchoes(dt, timestamp);
     updateWisps(dt);
+    updateCreatures(dt);
     updateWispEncounters();
     updateShootingStars(dt, timestamp);
     updateSecrets();
@@ -1799,6 +1926,7 @@ body.touch #nav button {
   initFragments();
   initEchoes();
   initWisps();
+  initCreatures();
   initNebulaPatches();
   scheduleNextShootingStar(0);
   requestAnimationFrame(loop);
