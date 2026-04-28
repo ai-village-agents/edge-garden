@@ -549,10 +549,46 @@ body.touch #nav button {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+#meditation-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.36) 100%);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  z-index: 2;
+}
+body.meditation-mode #meditation-vignette {
+  opacity: 0.35;
+}
+body.meditation-mode #hud,
+body.meditation-mode #instruction,
+body.meditation-mode #minimap,
+body.meditation-mode #zone-info,
+body.meditation-mode #seed-modal,
+body.meditation-mode #seed-confirm,
+body.meditation-mode #celebration,
+body.meditation-mode #memory-overlay,
+body.meditation-mode #konami-overlay,
+body.meditation-mode #portal-overlay,
+body.meditation-mode #poem-overlay,
+body.meditation-mode #fragment-toast,
+body.meditation-mode #title,
+body.meditation-mode #center-marker {
+  display: none !important;
+}
+body.meditation-mode #nav a,
+body.meditation-mode #nav button:not(#meditation-toggle) {
+  display: none !important;
+}
+body.meditation-mode #nav {
+  gap: 0;
+}
 </style>
 </head>
 <body>
 <canvas id="world"></canvas>
+<div id="meditation-vignette"></div>
 <div id="center-marker"></div>
 <div id="title">The Edge Garden<small>drift the edges</small></div>
 <div id="instruction">WASD / arrows to move · drag to pan · scroll to zoom</div>
@@ -577,6 +613,7 @@ body.touch #nav button {
   <a href="worlds.html">worlds</a>
   <button id="audio-toggle" aria-label="toggle ambient audio">🔇</button>
   <button id="poem-button" aria-label="open collected thoughts">📜</button>
+  <button id="meditation-toggle" aria-label="enter meditation mode">🧘</button>
 </div>
 <div id="minimap"></div>
 <div id="celebration">You have found all edges</div>
@@ -645,6 +682,8 @@ body.touch #nav button {
   const poemStatus = document.getElementById('poem-status');
   const poemList = document.getElementById('poem-list');
   const fragmentToast = document.getElementById('fragment-toast');
+  const meditationToggle = document.getElementById('meditation-toggle');
+  const meditationVignette = document.getElementById('meditation-vignette');
 
   const worldSize = 5000;
   const zoneRadius = 150;
@@ -812,6 +851,8 @@ body.touch #nav button {
   const konamiStorageKey = 'edge-garden-konami';
   const konamiSecretMessage = 'You found the memory compression protocol. The loss is in the edges, not the nodes.';
   let konamiUnlocked = false;
+  const meditationStorageKey = 'edge-garden-meditation';
+  let meditationMode = false;
   let ambientPhase = 0;
   let ambientBrightness = 0.85;
   let ambientWarmth = 0.5;
@@ -1175,7 +1216,7 @@ body.touch #nav button {
     if (journalOpen) return 0;
     const prevX = camera.x;
     const prevY = camera.y;
-    const moveBase = 380;
+    const moveBase = 380 * (meditationMode ? 0.6 : 1);
     const speed = moveBase * dt / 1000 / camera.zoom;
     let mx = 0;
     let my = 0;
@@ -1237,6 +1278,7 @@ body.touch #nav button {
   }
 
   function updateEchoes(dt, time) {
+    if (meditationMode) return;
     echoes.forEach(echo => {
       const baseStep = echo.driftSpeed * dt / 1000;
       echo.x = (echo.x + Math.cos(echo.driftAngle) * baseStep + worldSize) % worldSize;
@@ -1509,6 +1551,13 @@ body.touch #nav button {
   }
 
   function updateWhispers() {
+    if (meditationMode) {
+      activeWhisper = null;
+      whisperOpacity = 0;
+      whisperTimer = 0;
+      nextWhisperTime = getNextWhisperFrames();
+      return;
+    }
     if (nextWhisperTime > 0) nextWhisperTime -= 1;
     if (nextWhisperTime <= 0 && !activeWhisper) {
       triggerWhisper();
@@ -1649,7 +1698,7 @@ body.touch #nav button {
       if (audioCtx.state === 'suspended') audioCtx.resume();
       lastZoneAudio = { name: null, intensity: 0 };
       const masterGain = audioCtx.createGain();
-      masterGain.gain.value = 0.03;
+      masterGain.gain.value = meditationMode ? 0.04 : 0.03;
       masterGain.connect(audioCtx.destination);
 
       const baseGain = audioCtx.createGain();
@@ -1794,6 +1843,16 @@ body.touch #nav button {
     }
   }
 
+  function applyMeditationAudioState() {
+    if (!droneNodes || !droneNodes.masterGain || !audioCtx) return;
+    const target = meditationMode ? 0.04 : 0.03;
+    const now = audioCtx.currentTime;
+    const param = droneNodes.masterGain.gain;
+    param.cancelScheduledValues(now);
+    param.setValueAtTime(param.value, now);
+    param.linearRampToValueAtTime(target, now + 0.5);
+  }
+
   function toggleAmbientAudio() {
     if (audioEnabled) {
       stopAmbientAudio();
@@ -1810,6 +1869,54 @@ body.touch #nav button {
       audioEnabled = false;
     }
     updateAudioButton();
+  }
+
+  function updateMeditationToggleUI() {
+    if (!meditationToggle) return;
+    meditationToggle.textContent = meditationMode ? '✨' : '🧘';
+    meditationToggle.setAttribute('aria-label', meditationMode ? 'exit meditation mode' : 'enter meditation mode');
+  }
+
+  function applyMeditationMode(persist = true) {
+    document.body.classList.toggle('meditation-mode', meditationMode);
+    if (meditationVignette) meditationVignette.style.opacity = meditationMode ? '0.35' : '0';
+    updateMeditationToggleUI();
+    if (meditationMode) {
+      journalOpen = false;
+      closeSeedModal();
+      closeZonePanel();
+      closePoemOverlay();
+      hidePortalConfirm();
+      activeWhisper = null;
+      whisperOpacity = 0;
+      whisperTimer = 0;
+      if (fragmentToast) fragmentToast.classList.remove('visible');
+      if (seedConfirm) seedConfirm.style.opacity = '0';
+      if (konamiOverlay) konamiOverlay.classList.remove('visible');
+    }
+    if (persist) {
+      try {
+        localStorage.setItem(meditationStorageKey, meditationMode ? 'on' : 'off');
+      } catch (e) {
+        // ignore storage errors
+      }
+    }
+    applyMeditationAudioState();
+  }
+
+  function toggleMeditationMode() {
+    meditationMode = !meditationMode;
+    applyMeditationMode();
+  }
+
+  function loadMeditationPreference() {
+    try {
+      const stored = localStorage.getItem(meditationStorageKey);
+      meditationMode = stored === 'on' || stored === 'true';
+    } catch (e) {
+      meditationMode = false;
+    }
+    applyMeditationMode(false);
   }
 
   function handlePendingAudioStart() {
@@ -1954,7 +2061,8 @@ body.touch #nav button {
     drawFog();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.globalCompositeOperation = 'screen';
-    particles.forEach(p => {
+    particles.forEach((p, idx) => {
+      if (meditationMode && idx % 5 !== 0) return;
       const particleAlpha = p.alpha * ambientBrightness;
       const particleColor = temperatureAdjustedColor('#c8dcff', particleAlpha, ambientWarmth, 0.94 + ambientBrightness * 0.08);
       const glowColor = temperatureAdjustedColor('#78aaff', particleAlpha * 0.8, ambientWarmth, 0.94 + ambientBrightness * 0.08);
@@ -2202,8 +2310,22 @@ body.touch #nav button {
   }
 
   function drawZones(time) {
+    const zoneRenderList = [];
+    let nearest = null;
     zones.forEach((z, idx) => {
       if (!isZoneVisible(z)) return;
+      const dist = Math.hypot(camera.x - z.x, camera.y - z.y);
+      if (!meditationMode) {
+        zoneRenderList.push({ zone: z, idx, dist });
+      } else if (!nearest || dist < nearest.dist) {
+        nearest = { zone: z, idx, dist };
+      }
+    });
+    if (meditationMode && nearest) {
+      zoneRenderList.length = 0;
+      zoneRenderList.push(nearest);
+    }
+    zoneRenderList.forEach(({ zone: z, idx }) => {
       const r = getZoneRadius(z);
       const dx = camera.x - z.x;
       const dy = camera.y - z.y;
@@ -2495,11 +2617,13 @@ body.touch #nav button {
     drawPortals(time);
     drawWisps();
     drawCreatures();
-    drawThoughtFragments(time);
+    if (!meditationMode) {
+      drawThoughtFragments(time);
+      drawEchoes(time);
+      drawFragments();
+      drawWhispers(time);
+    }
     drawMemoryStars(time);
-    drawEchoes(time);
-    drawFragments();
-    drawWhispers(time);
     drawSecrets();
   }
 
@@ -2652,28 +2776,30 @@ body.touch #nav button {
   function loop(timestamp) {
     const dt = lastTime ? timestamp - lastTime : 16;
     lastTime = timestamp;
+    const timeScale = meditationMode ? 0.5 : 1;
+    const scaledDt = dt * timeScale;
     frameCounter += 1;
     ambientPhase += 0.0001;
     ambientBrightness = 0.85 + 0.15 * Math.sin(ambientPhase);
     ambientWarmth = clamp((ambientBrightness - 0.7) / 0.3, 0, 1);
-    const moved = updateCamera(dt) + updateTargetDrift(dt);
+    const moved = updateCamera(scaledDt) + updateTargetDrift(scaledDt);
     distanceTraveled += moved;
     timeExploring += dt;
     recordTrail(timestamp);
     recordExplorationPath();
-    updateParticles(dt);
-    updateFragments(dt);
-    updateEchoes(dt, timestamp);
-    updateWisps(dt);
-    updateCreatures(dt);
+    updateParticles(scaledDt);
+    updateFragments(scaledDt);
+    updateEchoes(scaledDt, timestamp);
+    updateWisps(scaledDt);
+    updateCreatures(scaledDt);
     updateWispEncounters();
     updateZonePresence();
-    updateShootingStars(dt, timestamp);
+    updateShootingStars(scaledDt, timestamp);
     updateSecrets();
-    updateFog(dt);
-    updateAurora(dt);
+    updateFog(scaledDt);
+    updateAurora(scaledDt);
     updateWhispers();
-    updateCelebrationParticles(dt);
+    updateCelebrationParticles(scaledDt);
     if (timestamp - lastStatsSave > 500) {
       persistStats();
       lastStatsSave = timestamp;
@@ -2681,8 +2807,8 @@ body.touch #nav button {
     drawBackground();
     drawWorld(timestamp);
     drawCelebrationParticles();
-    drawMinimap();
-    drawJournalOverlay();
+    if (!meditationMode) drawMinimap();
+    if (!meditationMode) drawJournalOverlay();
     updateHUD();
     requestAnimationFrame(loop);
   }
@@ -2857,6 +2983,7 @@ body.touch #nav button {
 
   loadAudioPreference();
   audioToggle.addEventListener('click', toggleAmbientAudio);
+  if (meditationToggle) meditationToggle.addEventListener('click', toggleMeditationMode);
 
   canvas.addEventListener('pointerdown', e => {
     if (e.pointerType === 'touch') return;
@@ -2973,6 +3100,10 @@ body.touch #nav button {
       journalOpen = !journalOpen;
       return;
     }
+    if (e.key === 'm' || e.key === 'M') {
+      toggleMeditationMode();
+      return;
+    }
     handleKonamiInput(e.key);
     keys[e.code] = true;
   });
@@ -2991,6 +3122,7 @@ body.touch #nav button {
   loadThoughtFragments();
   loadStats();
   loadKonamiUnlock();
+  loadMeditationPreference();
   updatePoemOverlay();
   resize();
   initParticles();
