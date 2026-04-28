@@ -908,6 +908,67 @@ body.meditation-mode #nav {
   const worldSize = 5000;
   const worldWidth = worldSize;
   const worldHeight = worldSize;
+  const streams = [
+    {
+      name: 'Stream 1',
+      waypoints: [
+        { x: 0, y: 1800 },
+        { x: 1200, y: 1900 },
+        { x: 2000, y: 1600 },
+        { x: 2800, y: 1800 },
+        { x: 3500, y: 1500 },
+        { x: 5000, y: 1600 }
+      ],
+      width: 26,
+      color: '#2255aa',
+      flowSpeed: 1.1
+    },
+    {
+      name: 'Stream 2',
+      waypoints: [
+        { x: 1500, y: 0 },
+        { x: 1600, y: 800 },
+        { x: 1400, y: 1600 },
+        { x: 1700, y: 2400 },
+        { x: 1500, y: 3200 },
+        { x: 1800, y: 4000 },
+        { x: 1600, y: 5000 }
+      ],
+      width: 22,
+      color: '#336699',
+      flowSpeed: 0.8
+    },
+    {
+      name: 'Stream 3',
+      waypoints: [
+        { x: 3000, y: 5000 },
+        { x: 3200, y: 4200 },
+        { x: 3000, y: 3400 },
+        { x: 3300, y: 2600 },
+        { x: 3100, y: 1800 },
+        { x: 3400, y: 1000 },
+        { x: 3200, y: 0 }
+      ],
+      width: 18,
+      color: '#224488',
+      flowSpeed: 1.35
+    },
+    {
+      name: 'Stream 4',
+      waypoints: [
+        { x: 0, y: 3500 },
+        { x: 800, y: 3300 },
+        { x: 1600, y: 3600 },
+        { x: 2400, y: 3400 },
+        { x: 3200, y: 3700 },
+        { x: 4000, y: 3300 },
+        { x: 5000, y: 3500 }
+      ],
+      width: 24,
+      color: '#447799',
+      flowSpeed: 0.6
+    }
+  ];
   const zoneRadius = 150;
   const monumentsStorageKey = 'edge-garden-monuments';
   const islandsStorageKey = 'edge-garden-islands';
@@ -1464,6 +1525,29 @@ body.meditation-mode #nav {
         fleeTimer: 0
       });
     }
+  }
+
+  function initStreams() {
+    streams.forEach(stream => {
+      const points = stream.waypoints ? stream.waypoints.map(p => ({ x: p.x, y: p.y })) : [];
+      stream.pathPoints = sampleStreamPath(points, 16);
+      stream.length = computePathLength(stream.pathPoints);
+      stream.waveOffset = Math.random() * Math.PI * 2;
+      stream.shimmerPhase = Math.random() * Math.PI * 2;
+      stream.lastRippleTime = 0;
+      const particleCount = Math.max(18, Math.round(stream.width * 2.4));
+      stream.flowParticles = [];
+      for (let i = 0; i < particleCount; i++) {
+        stream.flowParticles.push({
+          distance: Math.random() * Math.max(stream.length, 1),
+          offset: (Math.random() - 0.5) * stream.width * 0.4,
+          baseOffset: (Math.random() - 0.5) * stream.width * 0.25,
+          speedJitter: (Math.random() - 0.5) * 0.2,
+          size: 1.6 + Math.random() * 1.6,
+          seed: Math.random() * Math.PI * 2
+        });
+      }
+    });
   }
 
   const spiritSpawnInterval = () => 20000 + Math.random() * 20000;
@@ -2256,6 +2340,45 @@ body.meditation-mode #nav {
     });
   }
 
+  function triggerStreamRipples(stream, now) {
+    const cooldown = 1400;
+    if (now - (stream.lastRippleTime || 0) < cooldown) return;
+    const targets = [];
+    zones.forEach(z => {
+      if (isZoneVisible(z)) targets.push({ x: z.x, y: z.y });
+    });
+    thoughtFragments.forEach(f => {
+      if (!f.collected) targets.push({ x: f.x, y: f.y });
+    });
+    if (!targets.length) return;
+    const threshold = stream.width * 2.2 + 40;
+    let best = null;
+    targets.forEach(target => {
+      const { point, distance } = getClosestPointOnStream(stream, target);
+      if (point && distance < threshold && (!best || distance < best.distance)) {
+        best = { point, distance };
+      }
+    });
+    if (best) {
+      addRipple(best.point, now, stream.color);
+      stream.lastRippleTime = now;
+    }
+  }
+
+  function updateStreams(dt, now) {
+    streams.forEach(stream => {
+      if (!stream.flowParticles || !stream.length) return;
+      const speed = (stream.flowSpeed || 1) * 0.35;
+      stream.shimmerPhase = (stream.shimmerPhase || 0) + dt * 0.0015 * (stream.flowSpeed || 1);
+      stream.flowParticles.forEach(p => {
+        p.distance = (p.distance + speed * dt * (1 + p.speedJitter)) % stream.length;
+        const wobble = Math.sin((now || 0) * 0.002 + p.seed) * stream.width * 0.08;
+        p.offset = lerp(p.offset, p.baseOffset + wobble, 0.08);
+      });
+      triggerStreamRipples(stream, now || 0);
+    });
+  }
+
   function updateSpirits(dt, time) {
     const now = typeof time === 'number' ? time : 0;
     if (spiritCompanions.length >= MAX_SPIRITS) {
@@ -2752,6 +2875,105 @@ body.meditation-mode #nav {
         ripples.splice(i, 1);
       }
     }
+  }
+
+  function catmullRomPoint(p0, p1, p2, p3, t) {
+    const t2 = t * t;
+    const t3 = t2 * t;
+    return {
+      x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+      y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
+    };
+  }
+
+  function sampleStreamPath(points, stepsPerSegment = 14) {
+    if (!points || points.length < 2) return points || [];
+    const samples = [];
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i - 1] || points[i];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2] || points[i + 1] || points[i];
+      for (let step = 0; step < stepsPerSegment; step++) {
+        const t = step / stepsPerSegment;
+        samples.push(catmullRomPoint(p0, p1, p2, p3, t));
+      }
+    }
+    samples.push(points[points.length - 1]);
+    return samples;
+  }
+
+  function computePathLength(points) {
+    if (!points || points.length < 2) return 0;
+    let length = 0;
+    for (let i = 1; i < points.length; i++) {
+      const dx = points[i].x - points[i - 1].x;
+      const dy = points[i].y - points[i - 1].y;
+      length += Math.hypot(dx, dy);
+    }
+    return length;
+  }
+
+  function traceSmoothPath(ctx, points) {
+    if (!points || points.length < 2) return;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i - 1] || points[i];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2] || points[i + 1] || points[i];
+      const cp1 = {
+        x: p1.x + (p2.x - p0.x) / 6,
+        y: p1.y + (p2.y - p0.y) / 6
+      };
+      const cp2 = {
+        x: p2.x - (p3.x - p1.x) / 6,
+        y: p2.y - (p3.y - p1.y) / 6
+      };
+      ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, p2.x, p2.y);
+    }
+  }
+
+  function getStreamPosition(stream, distance, lateral = 0) {
+    if (!stream || !stream.pathPoints || stream.pathPoints.length < 2 || !stream.length) return { x: 0, y: 0 };
+    const len = stream.length;
+    const target = ((distance % len) + len) % len;
+    let accumulated = 0;
+    for (let i = 1; i < stream.pathPoints.length; i++) {
+      const a = stream.pathPoints[i - 1];
+      const b = stream.pathPoints[i];
+      const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+      if (accumulated + segLen >= target) {
+        const t = segLen === 0 ? 0 : (target - accumulated) / segLen;
+        const x = lerp(a.x, b.x, t);
+        const y = lerp(a.y, b.y, t);
+        const angle = Math.atan2(b.y - a.y, b.x - a.x);
+        const nx = -Math.sin(angle);
+        const ny = Math.cos(angle);
+        return { x: x + nx * lateral, y: y + ny * lateral };
+      }
+      accumulated += segLen;
+    }
+    const last = stream.pathPoints[stream.pathPoints.length - 1];
+    return { x: last.x, y: last.y };
+  }
+
+  function getClosestPointOnStream(stream, target) {
+    if (!stream || !stream.pathPoints || stream.pathPoints.length === 0) return { point: null, distance: Infinity };
+    let bestDist = Infinity;
+    let bestPoint = null;
+    for (let i = 0; i < stream.pathPoints.length; i += 2) {
+      const p = stream.pathPoints[i];
+      const dx = target.x - p.x;
+      const dy = target.y - p.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestPoint = p;
+      }
+    }
+    return { point: bestPoint, distance: bestDist };
   }
 
   function colorWithAlpha(hex, alpha) {
@@ -3314,6 +3536,61 @@ body.meditation-mode #nav {
       ctx.shadowColor = glowColor;
       ctx.arc(p.sx, p.sy, p.size * p.depth, 0, Math.PI * 2);
       ctx.fill();
+    });
+    ctx.shadowBlur = 0;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function drawStreamParticles(stream, time) {
+    if (!stream.flowParticles || !stream.flowParticles.length) return;
+    const prevComposite = ctx.globalCompositeOperation;
+    ctx.globalCompositeOperation = 'screen';
+    stream.flowParticles.forEach((p, idx) => {
+      const pos = getStreamPosition(stream, p.distance, p.offset);
+      const flicker = 0.7 + Math.sin(time * 0.006 + p.seed + idx * 0.2) * 0.25;
+      const alpha = 0.2 + 0.25 * flicker;
+      ctx.fillStyle = colorWithAlpha(stream.color, alpha);
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, p.size * (1 + flicker * 0.2), 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalCompositeOperation = prevComposite;
+  }
+
+  function drawStreams(time) {
+    setWorldTransform();
+    const now = time || 0;
+    streams.forEach((stream, idx) => {
+      if (!stream.pathPoints || stream.pathPoints.length < 2) return;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      const shimmer = Math.sin(now * 0.002 + (stream.shimmerPhase || 0) + idx) * 0.1 + 0.25;
+      const waveAlpha = 0.08 + shimmer * 0.08;
+
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = colorWithAlpha(stream.color, 0.35);
+      ctx.strokeStyle = colorWithAlpha(stream.color, 0.35);
+      ctx.lineWidth = stream.width;
+      traceSmoothPath(ctx, stream.pathPoints);
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.globalCompositeOperation = 'screen';
+      ctx.strokeStyle = colorWithAlpha('#aee6ff', 0.14 + shimmer * 0.3);
+      ctx.lineWidth = stream.width * 0.6;
+      ctx.setLineDash([stream.width * 2.5, stream.width * 1.3]);
+      ctx.lineDashOffset = -now * 0.02 * (stream.flowSpeed || 1);
+      traceSmoothPath(ctx, stream.pathPoints);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = colorWithAlpha(stream.color, waveAlpha);
+      ctx.lineWidth = stream.width + 6 + Math.sin(now * 0.0015 + (stream.waveOffset || 0)) * 2;
+      traceSmoothPath(ctx, stream.pathPoints);
+      ctx.stroke();
+
+      drawStreamParticles(stream, now);
     });
     ctx.shadowBlur = 0;
     ctx.globalCompositeOperation = 'source-over';
@@ -4390,6 +4667,7 @@ body.meditation-mode #nav {
   function drawWorld(time) {
     setWorldTransform();
     drawNebulaPatches();
+    drawStreams(time);
     drawShootingStars();
     drawTrail(time);
     drawConstellationLines(time);
@@ -4631,6 +4909,7 @@ body.meditation-mode #nav {
     updateEchoes(scaledDt, timestamp);
     updateWisps(scaledDt);
     updateCreatures(scaledDt);
+    updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
     updateMemoryWell(scaledDt);
@@ -4727,13 +5006,13 @@ body.meditation-mode #nav {
     return false;
   }
 
-  function addRipple(worldPos, startTime) {
+  function addRipple(worldPos, startTime, colorOverride) {
     ripples.push({
       x: clamp(worldPos.x, 0, worldSize),
       y: clamp(worldPos.y, 0, worldSize),
       birth: startTime || performance.now(),
       duration: 1000,
-      color: getNearestZoneColor(worldPos)
+      color: colorOverride || getNearestZoneColor(worldPos)
     });
   }
 
@@ -5009,6 +5288,7 @@ body.meditation-mode #nav {
   initRain();
   initWisps();
   initCreatures();
+  initStreams();
   initAttractorOrbs();
   initMemoryWellParticles();
   initFogPatches();
