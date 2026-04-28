@@ -293,6 +293,16 @@ body {
   border-color: rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.09);
 }
+#rain-toggle {
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
 body.touch #nav a,
 body.touch #nav button {
   padding: 10px 14px;
@@ -614,6 +624,7 @@ body.meditation-mode #nav {
   <button id="audio-toggle" aria-label="toggle ambient audio">🔇</button>
   <button id="poem-button" aria-label="open collected thoughts">📜</button>
   <button id="meditation-toggle" aria-label="enter meditation mode">🧘</button>
+  <button id="rain-toggle" aria-label="toggle rain">🌧️</button>
 </div>
 <div id="minimap"></div>
 <div id="celebration">You have found all edges</div>
@@ -683,9 +694,12 @@ body.meditation-mode #nav {
   const poemList = document.getElementById('poem-list');
   const fragmentToast = document.getElementById('fragment-toast');
   const meditationToggle = document.getElementById('meditation-toggle');
+  const rainToggle = document.getElementById('rain-toggle');
   const meditationVignette = document.getElementById('meditation-vignette');
 
   const worldSize = 5000;
+  const worldWidth = worldSize;
+  const worldHeight = worldSize;
   const zoneRadius = 150;
   const secretsStorageKey = 'edge-garden-secrets';
   const memoryStarsStorageKey = 'edge-garden-memory-stars';
@@ -796,6 +810,9 @@ body.meditation-mode #nav {
   const fogPatches = [];
   const shootingStars = [];
   const maxShootingStars = 3;
+  let rainEnabled = false;
+  const rainDrops = [];
+  const RAIN_COUNT = 150;
   let nextShootingStar = 0;
   const secrets = [
     { id: 'secret-1', x: 450, y: 450, text: 'The first garden was here' },
@@ -936,6 +953,19 @@ body.meditation-mode #nav {
         attract: 0
       });
     });
+  }
+
+  function initRain() {
+    rainDrops.length = 0;
+    for (let i = 0; i < RAIN_COUNT; i++) {
+      rainDrops.push({
+        x: Math.random() * worldWidth,
+        y: Math.random() * worldHeight,
+        speed: 8 + Math.random() * 7,
+        length: 15 + Math.random() * 15,
+        opacity: 0.2 + Math.random() * 0.3
+      });
+    }
   }
 
   function initWisps() {
@@ -1523,6 +1553,17 @@ body.meditation-mode #nav {
     });
   }
 
+  function updateRain() {
+    if (!rainDrops.length) return;
+    rainDrops.forEach(drop => {
+      drop.y += drop.speed;
+      if (drop.y > worldHeight) {
+        drop.y = 0;
+        drop.x = Math.random() * worldWidth;
+      }
+    });
+  }
+
   function hexToRgb(hex) {
     const clean = hex.replace('#', '');
     const full = clean.length === 3 ? clean.split('').map(ch => ch + ch).join('') : clean;
@@ -1667,6 +1708,12 @@ body.meditation-mode #nav {
 
   function updateAudioButton() {
     audioToggle.textContent = audioEnabled ? '🔊' : '🔇';
+  }
+
+  function updateRainToggle() {
+    if (!rainToggle) return;
+    rainToggle.textContent = rainEnabled ? '☀️' : '🌧️';
+    rainToggle.setAttribute('aria-label', rainEnabled ? 'disable rain' : 'toggle rain');
   }
 
   function stopAmbientAudio() {
@@ -1859,6 +1906,11 @@ body.meditation-mode #nav {
     } else {
       startAmbientAudio();
     }
+  }
+
+  function toggleRain() {
+    rainEnabled = !rainEnabled;
+    updateRainToggle();
   }
 
   function loadAudioPreference() {
@@ -2075,6 +2127,22 @@ body.meditation-mode #nav {
     });
     ctx.shadowBlur = 0;
     ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function drawRain(ctx) {
+    if (!rainEnabled || !rainDrops.length) return;
+    setWorldTransform();
+    ctx.strokeStyle = '#88ccff';
+    ctx.lineWidth = 1;
+    ctx.lineCap = 'round';
+    rainDrops.forEach(drop => {
+      ctx.globalAlpha = drop.opacity;
+      ctx.beginPath();
+      ctx.moveTo(drop.x, drop.y);
+      ctx.lineTo(drop.x, drop.y + drop.length);
+      ctx.stroke();
+    });
+    ctx.globalAlpha = 1;
   }
 
   function drawAurora(time) {
@@ -2613,6 +2681,8 @@ body.meditation-mode #nav {
     drawTrail(time);
     drawConstellationLines(time);
     drawAurora(time);
+    updateRain();
+    drawRain(ctx);
     drawZones(time);
     drawPortals(time);
     drawWisps();
@@ -2983,6 +3053,7 @@ body.meditation-mode #nav {
 
   loadAudioPreference();
   audioToggle.addEventListener('click', toggleAmbientAudio);
+  if (rainToggle) rainToggle.addEventListener('click', toggleRain);
   if (meditationToggle) meditationToggle.addEventListener('click', toggleMeditationMode);
 
   canvas.addEventListener('pointerdown', e => {
@@ -3123,11 +3194,13 @@ body.meditation-mode #nav {
   loadStats();
   loadKonamiUnlock();
   loadMeditationPreference();
+  updateRainToggle();
   updatePoemOverlay();
   resize();
   initParticles();
   initFragments();
   initEchoes();
+  initRain();
   initWisps();
   initCreatures();
   initFogPatches();
