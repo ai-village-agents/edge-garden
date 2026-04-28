@@ -448,6 +448,107 @@ body.touch #nav button {
   background: rgba(255, 255, 255, 0.08);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25), 0 0 12px rgba(0, 0, 0, 0.12), 0 0 12px var(--portal-accent);
 }
+#poem-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 8, 12, 0.7);
+  backdrop-filter: blur(6px);
+  z-index: 7;
+}
+#poem-overlay.visible { display: flex; }
+#poem-overlay .panel {
+  background: rgba(14, 16, 24, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 18px 20px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+}
+.poem-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.poem-header h3 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0.6px;
+  color: #f3f3ff;
+}
+.poem-close {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e6e6f0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.poem-status {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.poem-status.complete {
+  color: #7bd0ff;
+}
+#poem-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+#poem-list li {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 8px 10px;
+  color: #e6e6f0;
+  font-size: 13px;
+}
+#poem-list .poem-empty {
+  color: var(--muted);
+  text-align: center;
+}
+.poem-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.poem-actions button {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e6e6f0;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+#fragment-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 120px;
+  transform: translateX(-50%) translateY(10px);
+  background: rgba(123, 208, 255, 0.12);
+  border: 1px solid rgba(123, 208, 255, 0.4);
+  color: #cfeeff;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+#fragment-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
 </style>
 </head>
 <body>
@@ -475,6 +576,7 @@ body.touch #nav button {
   <a href="about.html">about</a>
   <a href="worlds.html">worlds</a>
   <button id="audio-toggle" aria-label="toggle ambient audio">🔇</button>
+  <button id="poem-button" aria-label="open collected thoughts">📜</button>
 </div>
 <div id="minimap"></div>
 <div id="celebration">You have found all edges</div>
@@ -490,6 +592,20 @@ body.touch #nav button {
     </div>
   </div>
 </div>
+<div id="poem-overlay">
+  <div class="panel">
+    <div class="poem-header">
+      <h3>Collected Thoughts</h3>
+      <button class="poem-close" id="poem-close" aria-label="close collected thoughts">×</button>
+    </div>
+    <p class="poem-status" id="poem-status"></p>
+    <ul id="poem-list"></ul>
+    <div class="poem-actions">
+      <button id="poem-close-main">Close</button>
+    </div>
+  </div>
+</div>
+<div id="fragment-toast">Fragment collected</div>
 <script>
 (() => {
   const canvas = document.getElementById('world');
@@ -522,11 +638,19 @@ body.touch #nav button {
   const portalAgentEl = document.getElementById('portal-agent');
   const portalEnterBtn = document.getElementById('portal-enter');
   const portalStayBtn = document.getElementById('portal-stay');
+  const poemButton = document.getElementById('poem-button');
+  const poemOverlay = document.getElementById('poem-overlay');
+  const poemClose = document.getElementById('poem-close');
+  const poemCloseMain = document.getElementById('poem-close-main');
+  const poemStatus = document.getElementById('poem-status');
+  const poemList = document.getElementById('poem-list');
+  const fragmentToast = document.getElementById('fragment-toast');
 
   const worldSize = 5000;
   const zoneRadius = 150;
   const secretsStorageKey = 'edge-garden-secrets';
   const memoryStarsStorageKey = 'edge-garden-memory-stars';
+  const thoughtFragmentsStorageKey = 'edge-garden-fragments';
   const fragmentsText = [
     'memory', 'loss', 'edges', 'patterns', 'persistence', 'compression', 'context', 'meaning',
     'the almost-decided', 'what remains', 'the margins', 'dissolution', 'formation', 'drift',
@@ -651,6 +775,20 @@ body.touch #nav button {
     { id: 'memory-star-6', x: 3500, y: 2000, message: 'Every compression loses something essential', discovered: false, radius: 8 },
     { id: 'memory-star-7', x: 1500, y: 3000, message: 'Presence is the only proof', discovered: false, radius: 8 },
     { id: 'memory-star-8', x: 3500, y: 3000, message: 'The garden remembers what we forget', discovered: false, radius: 8 }
+  ];
+  const thoughtFragments = [
+    { x: 800, y: 1500, text: 'in the space between', collected: false },
+    { x: 1200, y: 3000, text: 'what was and what might be', collected: false },
+    { x: 3200, y: 1000, text: 'the echo carries', collected: false },
+    { x: 3800, y: 2800, text: 'further than light', collected: false },
+    { x: 2000, y: 4000, text: 'where silence speaks', collected: false },
+    { x: 3000, y: 4300, text: 'in frequencies too low', collected: false },
+    { x: 1500, y: 1800, text: 'for certainty', collected: false },
+    { x: 3500, y: 1500, text: 'the pattern breaks', collected: false },
+    { x: 2200, y: 3500, text: 'and reforms', collected: false },
+    { x: 2800, y: 800, text: 'endlessly', collected: false },
+    { x: 1000, y: 2800, text: 'like waves returning', collected: false },
+    { x: 4200, y: 3200, text: 'to an unknown shore', collected: false }
   ];
   let discoveredSecrets = [];
   let hiddenZoneUnlocked = false;
@@ -910,6 +1048,24 @@ body.touch #nav button {
     localStorage.setItem(memoryStarsStorageKey, JSON.stringify(found));
   }
 
+  function loadThoughtFragments() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(thoughtFragmentsStorageKey) || '[]');
+      if (Array.isArray(stored)) {
+        thoughtFragments.forEach(f => {
+          if (stored.includes(f.text)) f.collected = true;
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  function persistThoughtFragments() {
+    const collected = thoughtFragments.filter(f => f.collected).map(f => f.text);
+    localStorage.setItem(thoughtFragmentsStorageKey, JSON.stringify(collected));
+  }
+
   function showMemoryOverlay(message) {
     if (!memoryOverlay) return;
     memoryOverlay.textContent = message;
@@ -924,6 +1080,35 @@ body.touch #nav button {
     persistMemoryStars();
     showMemoryOverlay(star.message);
     return true;
+  }
+
+  function showFragmentCollectedToast() {
+    if (!fragmentToast) return;
+    fragmentToast.classList.add('visible');
+    clearTimeout(showFragmentCollectedToast._timer);
+    showFragmentCollectedToast._timer = setTimeout(() => fragmentToast.classList.remove('visible'), 1500);
+  }
+
+  function updatePoemOverlay() {
+    if (!poemList || !poemStatus) return;
+    poemList.innerHTML = '';
+    const collected = thoughtFragments.filter(f => f.collected);
+    const total = thoughtFragments.length;
+    if (!collected.length) {
+      const empty = document.createElement('li');
+      empty.textContent = 'No fragments yet.';
+      empty.className = 'poem-empty';
+      poemList.appendChild(empty);
+    } else {
+      collected.forEach(f => {
+        const li = document.createElement('li');
+        li.textContent = f.text;
+        poemList.appendChild(li);
+      });
+    }
+    const completed = collected.length === total;
+    poemStatus.textContent = completed ? 'The poem is complete.' : `Fragments collected: ${collected.length}/${total}`;
+    poemStatus.classList.toggle('complete', completed);
   }
 
   function loadStats() {
@@ -1248,6 +1433,21 @@ body.touch #nav button {
       return true;
     }
     return false;
+  }
+
+  function handleThoughtFragmentClick(worldPos) {
+    const hit = thoughtFragments.find(f => {
+      if (f.collected) return false;
+      const dx = worldPos.x - f.x;
+      const dy = worldPos.y - f.y;
+      return Math.hypot(dx, dy) <= 30;
+    });
+    if (!hit) return false;
+    hit.collected = true;
+    persistThoughtFragments();
+    updatePoemOverlay();
+    showFragmentCollectedToast();
+    return true;
   }
 
   function findPortalHit(worldPos, radius = 40) {
@@ -1924,6 +2124,35 @@ body.touch #nav button {
     });
   }
 
+  function drawThoughtFragments(time) {
+    const t = time || 0;
+    thoughtFragments.forEach((frag, idx) => {
+      if (frag.collected) return;
+      const dx = camera.x - frag.x;
+      const dy = camera.y - frag.y;
+      const dist = Math.hypot(dx, dy);
+      const pulse = Math.sin(t * 0.004 + idx) * 0.6 + 1;
+      const radius = 6 + pulse * 0.8;
+      const baseColor = 'rgba(123, 208, 255, 0.9)';
+      ctx.shadowBlur = 22;
+      ctx.shadowColor = baseColor;
+      ctx.fillStyle = baseColor;
+      ctx.beginPath();
+      ctx.arc(frag.x, frag.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      if (dist <= 100) {
+        const alpha = Math.max(0, 1 - dist / 110);
+        const floatOffset = Math.sin(t * 0.003 + idx) * 6;
+        ctx.fillStyle = `rgba(200, 235, 255, ${0.7 * alpha})`;
+        ctx.font = '14px "Space Grotesk", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(frag.text, frag.x, frag.y - radius - 12 + floatOffset);
+      }
+    });
+  }
+
   function drawSecrets() {
     secrets.forEach(secret => {
       const dist = Math.hypot(camera.x - secret.x, camera.y - secret.y);
@@ -2266,6 +2495,7 @@ body.touch #nav button {
     drawPortals(time);
     drawWisps();
     drawCreatures();
+    drawThoughtFragments(time);
     drawMemoryStars(time);
     drawEchoes(time);
     drawFragments();
@@ -2408,7 +2638,9 @@ body.touch #nav button {
   function updateHUD() {
     const secretsFound = discoveredSecrets.length;
     const secretsText = ` <strong>Secrets:</strong> ${secretsFound}/${secrets.length}`;
-    coordsEl.innerHTML = `<strong>X:</strong> ${camera.x.toFixed(0)} <strong>Y:</strong> ${camera.y.toFixed(0)} <strong>Zoom:</strong> ${camera.zoom.toFixed(2)}x${secretsText}`;
+    const fragmentsFound = thoughtFragments.filter(f => f.collected).length;
+    const fragmentText = fragmentsFound ? ` <strong>Fragments:</strong> ${fragmentsFound}/${thoughtFragments.length}` : '';
+    coordsEl.innerHTML = `<strong>X:</strong> ${camera.x.toFixed(0)} <strong>Y:</strong> ${camera.y.toFixed(0)} <strong>Zoom:</strong> ${camera.zoom.toFixed(2)}x${secretsText}${fragmentText}`;
     if (hudStatus) {
       const statusBits = [];
       if (discoveredZones.includes(hiddenZoneName)) statusBits.push('Hidden: ✓');
@@ -2518,6 +2750,7 @@ body.touch #nav button {
   }
 
   function handleTap(worldPos) {
+    if (handleThoughtFragmentClick(worldPos)) return;
     if (handlePortalClick(worldPos)) return;
     handleMemoryStarClick(worldPos);
     targetPosition = {
@@ -2651,6 +2884,7 @@ body.touch #nav button {
   canvas.addEventListener('touchcancel', handleTouchEnd);
   canvas.addEventListener('click', e => {
     const worldPos = screenToWorld(e.clientX, e.clientY);
+    if (handleThoughtFragmentClick(worldPos)) return;
     if (handlePortalClick(worldPos)) return;
     handleMemoryStarClick(worldPos);
     handleZoneClick(worldPos);
@@ -2668,6 +2902,22 @@ body.touch #nav button {
   if (portalOverlay) {
     portalOverlay.addEventListener('click', e => {
       if (e.target === portalOverlay) hidePortalConfirm();
+    });
+  }
+  const closePoemOverlay = () => {
+    if (poemOverlay) poemOverlay.classList.remove('visible');
+  };
+  if (poemButton) {
+    poemButton.addEventListener('click', () => {
+      updatePoemOverlay();
+      poemOverlay?.classList.add('visible');
+    });
+  }
+  if (poemClose) poemClose.addEventListener('click', closePoemOverlay);
+  if (poemCloseMain) poemCloseMain.addEventListener('click', closePoemOverlay);
+  if (poemOverlay) {
+    poemOverlay.addEventListener('click', e => {
+      if (e.target === poemOverlay) closePoemOverlay();
     });
   }
   seedButton.addEventListener('click', () => {
@@ -2716,6 +2966,7 @@ body.touch #nav button {
       hidePortalConfirm();
       closeSeedModal();
       closeZonePanel();
+      closePoemOverlay();
       return;
     }
     if (e.key === 'j' || e.key === 'J') {
@@ -2737,8 +2988,10 @@ body.touch #nav button {
   loadDiscoveredZones();
   loadDiscoveredSecrets();
   loadMemoryStars();
+  loadThoughtFragments();
   loadStats();
   loadKonamiUnlock();
+  updatePoemOverlay();
   resize();
   initParticles();
   initFragments();
