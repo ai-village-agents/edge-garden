@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>The Edge Garden</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500&family=DM+Mono:wght@300;400&display=swap');
@@ -28,6 +28,7 @@ body {
   height: 100vh;
   background: var(--bg);
   display: block;
+  touch-action: none;
 }
 #hud {
   position: fixed;
@@ -240,6 +241,10 @@ body {
   border-color: rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.09);
 }
+body.touch #nav a,
+body.touch #nav button {
+  padding: 10px 14px;
+}
 #center-marker {
   position: fixed;
   left: 50%;
@@ -331,6 +336,7 @@ body {
   const seedConfirm = document.getElementById('seed-confirm');
   const celebrationEl = document.getElementById('celebration');
   const audioToggle = document.getElementById('audio-toggle');
+  const instructionEl = document.getElementById('instruction');
 
   const worldSize = 5000;
   const zoneRadius = 150;
@@ -360,10 +366,19 @@ body {
     y: worldSize / 2,
     zoom: 1
   };
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
   const keys = {};
   let dragging = false;
   let lastPointer = { x: 0, y: 0 };
+  let isTouching = false;
+  let lastTouchPos = null;
+  let pinchStartDist = 0;
+  let startZoom = camera.zoom;
+  let tapStartTime = 0;
+  let tapStartPos = null;
+  let tapMoved = false;
+  let targetPosition = null;
 
   const particles = [];
   const particleCount = 120;
@@ -397,6 +412,8 @@ body {
   const wispsEncountered = new Set();
   const statsStorageKey = 'edge-garden-stats';
   let lastStatsSave = 0;
+
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
   function resize() {
     width = window.innerWidth;
@@ -578,13 +595,32 @@ body {
     if (keys['KeyA'] || keys['ArrowLeft']) mx -= 1;
     if (keys['KeyD'] || keys['ArrowRight']) mx += 1;
     if (mx || my) {
+      targetPosition = null;
       const len = Math.hypot(mx, my) || 1;
       camera.x += (mx / len) * speed;
       camera.y += (my / len) * speed;
     }
-    camera.x = Math.max(0, Math.min(worldSize, camera.x));
-    camera.y = Math.max(0, Math.min(worldSize, camera.y));
+    camera.x = clamp(camera.x, 0, worldSize);
+    camera.y = clamp(camera.y, 0, worldSize);
     return Math.hypot(camera.x - prevX, camera.y - prevY);
+  }
+
+  function updateTargetDrift(dt) {
+    if (!targetPosition || journalOpen || isTouching) return 0;
+    const dx = targetPosition.x - camera.x;
+    const dy = targetPosition.y - camera.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 6) {
+      targetPosition = null;
+      return 0;
+    }
+    const speed = Math.min(520, dist * 1.8);
+    const step = speed * dt / 1000;
+    const nx = dx / dist;
+    const ny = dy / dist;
+    camera.x = clamp(camera.x + nx * step, 0, worldSize);
+    camera.y = clamp(camera.y + ny * step, 0, worldSize);
+    return step;
   }
 
   function updateParticles(dt) {
@@ -1213,7 +1249,7 @@ body {
   function loop(timestamp) {
     const dt = lastTime ? timestamp - lastTime : 16;
     lastTime = timestamp;
-    const moved = updateCamera(dt);
+    const moved = updateCamera(dt) + updateTargetDrift(dt);
     distanceTraveled += moved;
     timeExploring += dt;
     recordTrail(timestamp);
@@ -1244,6 +1280,13 @@ body {
     return { x, y };
   }
 
+  function getTouchDistance(touches) {
+    if (touches.length < 2) return 0;
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(dx, dy);
+  }
+
   function handleZoneClick(worldPos) {
     const hit = zones.find(z => {
       const dx = worldPos.x - z.x;
@@ -1260,6 +1303,14 @@ body {
       markZoneDiscovered(hit.name);
       seedModal.classList.remove('visible');
     }
+  }
+
+  function handleTap(worldPos) {
+    targetPosition = {
+      x: clamp(worldPos.x, 0, worldSize),
+      y: clamp(worldPos.y, 0, worldSize)
+    };
+    handleZoneClick(worldPos);
   }
 
   function openSeedModal() {
@@ -1280,24 +1331,110 @@ body {
     showSeedConfirm._timer = setTimeout(() => seedConfirm.style.opacity = '0', 1500);
   }
 
+  function handleTouchStart(e) {
+    if (!e.touches.length) return;
+    isTouching = true;
+    targetPosition = null;
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      lastTouchPos = { x: t.clientX, y: t.clientY };
+      tapStartPos = { x: t.clientX, y: t.clientY };
+      tapStartTime = performance.now();
+      tapMoved = false;
+    } else if (e.touches.length === 2) {
+      pinchStartDist = getTouchDistance(e.touches);
+      startZoom = camera.zoom;
+      tapStartTime = 0;
+      tapStartPos = null;
+    }
+  }
+
+  function handleTouchMove(e) {
+    if (!e.touches.length) return;
+    e.preventDefault();
+    if (e.touches.length === 1 && lastTouchPos) {
+      const t = e.touches[0];
+      const dx = t.clientX - lastTouchPos.x;
+      const dy = t.clientY - lastTouchPos.y;
+      if (Math.hypot(dx, dy) > 6) tapMoved = true;
+      camera.x = clamp(camera.x - dx / camera.zoom, 0, worldSize);
+      camera.y = clamp(camera.y - dy / camera.zoom, 0, worldSize);
+      lastTouchPos = { x: t.clientX, y: t.clientY };
+    } else if (e.touches.length === 2) {
+      const dist = getTouchDistance(e.touches);
+      if (pinchStartDist) {
+        const scale = dist / pinchStartDist;
+        camera.zoom = clamp(startZoom * scale, 0.5, 2);
+      } else {
+        pinchStartDist = dist;
+        startZoom = camera.zoom;
+      }
+    }
+  }
+
+  function handleTouchEnd(e) {
+    if (e.touches.length < 2) pinchStartDist = 0;
+    if (e.touches.length === 0) {
+      isTouching = false;
+      if (tapStartTime && tapStartPos) {
+        const elapsed = performance.now() - tapStartTime;
+        const touch = e.changedTouches[0] || { clientX: tapStartPos.x, clientY: tapStartPos.y };
+        const endPos = { x: touch.clientX, y: touch.clientY };
+        const moveDist = Math.hypot(endPos.x - tapStartPos.x, endPos.y - tapStartPos.y);
+        if (moveDist > 6) tapMoved = true;
+        if (elapsed <= 200 && !tapMoved) {
+          const worldPos = screenToWorld(endPos.x, endPos.y);
+          handleTap(worldPos);
+        }
+      }
+      tapStartTime = 0;
+      tapStartPos = null;
+    } else if (e.touches.length === 1) {
+      const t = e.touches[0];
+      lastTouchPos = { x: t.clientX, y: t.clientY };
+      tapStartTime = performance.now();
+      tapStartPos = { x: t.clientX, y: t.clientY };
+      tapMoved = false;
+    }
+  }
+
+  const baseInstruction = 'WASD / arrows to move · drag to pan · scroll to zoom';
+  if (instructionEl) {
+    if (isTouchDevice) {
+      document.body.classList.add('touch');
+      instructionEl.textContent = `${baseInstruction} · touch: drag to move • pinch to zoom • tap to drift`;
+    } else {
+      instructionEl.textContent = baseInstruction;
+    }
+  }
+
   loadAudioPreference();
   audioToggle.addEventListener('click', toggleAmbientAudio);
 
   canvas.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'touch') return;
     dragging = true;
+    targetPosition = null;
     lastPointer.x = e.clientX;
     lastPointer.y = e.clientY;
   });
   window.addEventListener('pointermove', e => {
-    if (!dragging) return;
+    if (e.pointerType === 'touch' || !dragging) return;
     const dx = e.clientX - lastPointer.x;
     const dy = e.clientY - lastPointer.y;
-    camera.x -= dx / camera.zoom;
-    camera.y -= dy / camera.zoom;
+    camera.x = clamp(camera.x - dx / camera.zoom, 0, worldSize);
+    camera.y = clamp(camera.y - dy / camera.zoom, 0, worldSize);
     lastPointer.x = e.clientX;
     lastPointer.y = e.clientY;
   });
-  window.addEventListener('pointerup', () => dragging = false);
+  window.addEventListener('pointerup', e => {
+    if (e.pointerType === 'touch') return;
+    dragging = false;
+  });
+  canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+  canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+  canvas.addEventListener('touchend', handleTouchEnd);
+  canvas.addEventListener('touchcancel', handleTouchEnd);
   canvas.addEventListener('click', e => {
     const worldPos = screenToWorld(e.clientX, e.clientY);
     handleZoneClick(worldPos);
