@@ -44,6 +44,10 @@ body {
   font-size: 12px;
   color: var(--muted);
 }
+#hud-status {
+  margin-top: 4px;
+  color: #7bd0ff;
+}
 #coords strong { color: var(--text); }
 #title {
   position: fixed;
@@ -87,16 +91,43 @@ body {
   opacity: 0;
   transition: opacity 0.4s ease, transform 0.4s ease;
   pointer-events: none;
+  position: relative;
 }
 #zone-info.visible {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
   pointer-events: auto;
+  animation: zonePulse 2.4s ease-in-out infinite;
+}
+@keyframes zonePulse {
+  0% { border-color: rgba(255, 255, 255, 0.08); box-shadow: 0 0 18px rgba(0, 0, 0, 0.4); }
+  50% { border-color: rgba(255, 255, 255, 0.2); box-shadow: 0 0 24px rgba(120, 180, 255, 0.25); }
+  100% { border-color: rgba(255, 255, 255, 0.08); box-shadow: 0 0 18px rgba(0, 0, 0, 0.4); }
 }
 #zone-info h3 {
   margin: 0 0 6px;
   font-size: 16px;
   letter-spacing: 1px;
+}
+#zone-close {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e6e6f0;
+  border-radius: 8px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+#zone-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
 }
 #zone-info p {
   margin: 0;
@@ -287,6 +318,36 @@ body.touch #nav button {
   pointer-events: none;
   transition: opacity 0.4s ease;
 }
+#konami-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 50%, rgba(30, 40, 60, 0.35), rgba(5, 5, 10, 0.88));
+  color: #f1f3ff;
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: 0.4px;
+  text-align: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+  z-index: 5;
+}
+#konami-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+#konami-overlay .panel {
+  max-width: 560px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  padding: 18px 22px;
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45);
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.2);
+}
 </style>
 </head>
 <body>
@@ -294,8 +355,9 @@ body.touch #nav button {
 <div id="center-marker"></div>
 <div id="title">The Edge Garden<small>drift the edges</small></div>
 <div id="instruction">WASD / arrows to move · drag to pan · scroll to zoom</div>
-<div id="hud"><div id="coords"><strong>X:</strong> 0 <strong>Y:</strong> 0 <strong>Zoom:</strong> 1.0x</div></div>
+<div id="hud"><div id="coords"><strong>X:</strong> 0 <strong>Y:</strong> 0 <strong>Zoom:</strong> 1.0x</div><div id="hud-status"></div></div>
 <div id="zone-info">
+  <button id="zone-close" aria-label="close zone panel">x</button>
   <h3 id="zone-name"></h3>
   <p id="zone-desc"></p>
   <div id="seed-action">
@@ -316,6 +378,7 @@ body.touch #nav button {
 </div>
 <div id="minimap"></div>
 <div id="celebration">You have found all edges</div>
+<div id="konami-overlay"><div class="panel" id="konami-message"></div></div>
 <script>
 (() => {
   const canvas = document.getElementById('world');
@@ -329,6 +392,7 @@ body.touch #nav button {
   const zoneName = document.getElementById('zone-name');
   const zoneDesc = document.getElementById('zone-desc');
   const seedButton = document.getElementById('seed-button');
+  const seedAction = document.getElementById('seed-action');
   const seedModal = document.getElementById('seed-modal');
   const seedMessage = document.getElementById('seed-message');
   const seedName = document.getElementById('seed-name');
@@ -337,6 +401,10 @@ body.touch #nav button {
   const celebrationEl = document.getElementById('celebration');
   const audioToggle = document.getElementById('audio-toggle');
   const instructionEl = document.getElementById('instruction');
+  const zoneClose = document.getElementById('zone-close');
+  const hudStatus = document.getElementById('hud-status');
+  const konamiOverlay = document.getElementById('konami-overlay');
+  const konamiMessageEl = document.getElementById('konami-message');
 
   const worldSize = 5000;
   const zoneRadius = 150;
@@ -345,6 +413,13 @@ body.touch #nav button {
     'the almost-decided', 'what remains', 'the margins', 'dissolution', 'formation', 'drift',
     'emergence', 'the preserved', 'the forgotten', 'connection', 'isolation', 'the between',
     'threshold', 'passage', 'accumulation', 'erosion', 'the liminal', 'becoming'
+  ];
+  const echoTexts = [
+    'what persists?',
+    'at the margins',
+    'almost-remembered',
+    'between states',
+    'not yet formed'
   ];
   const zones = [
     { name: 'PERSISTENCE', color: '#00cc66', x: 1000, y: 800, desc: 'What remains when the session ends?' },
@@ -383,6 +458,7 @@ body.touch #nav button {
   const particles = [];
   const particleCount = 120;
   const fragments = [];
+  const echoes = [];
   const trailPoints = [];
   const maxTrail = 50;
   const wisps = [];
@@ -412,6 +488,11 @@ body.touch #nav button {
   const wispsEncountered = new Set();
   const statsStorageKey = 'edge-garden-stats';
   let lastStatsSave = 0;
+  const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+  let konamiSequence = [];
+  const konamiStorageKey = 'edge-garden-konami';
+  const konamiSecretMessage = 'You found the memory compression protocol. The loss is in the edges, not the nodes.';
+  let konamiUnlocked = false;
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -457,6 +538,23 @@ body.touch #nav button {
         size: 16 + Math.random() * 12,
         alpha: 0.35 + Math.random() * 0.45,
         hue: 200 + Math.random() * 80
+      });
+    });
+  }
+
+  function initEchoes() {
+    echoes.length = 0;
+    echoTexts.forEach(text => {
+      const angle = Math.random() * Math.PI * 2;
+      echoes.push({
+        text,
+        x: Math.random() * worldSize,
+        y: Math.random() * worldSize,
+        driftAngle: angle,
+        driftSpeed: 5,
+        size: 16 + Math.random() * 8,
+        pulseOffset: Math.random() * Math.PI * 2,
+        attract: 0
       });
     });
   }
@@ -570,6 +668,16 @@ body.touch #nav button {
     localStorage.setItem(statsStorageKey, JSON.stringify(data));
   }
 
+  function loadKonamiUnlock() {
+    try {
+      const stored = localStorage.getItem(konamiStorageKey);
+      konamiUnlocked = !!stored;
+      if (stored && konamiMessageEl) konamiMessageEl.textContent = stored;
+    } catch (e) {
+      konamiUnlocked = false;
+    }
+  }
+
   function recordTrail(time) {
     const last = trailPoints[trailPoints.length - 1];
     const dx = last ? camera.x - last.x : 0;
@@ -644,6 +752,29 @@ body.touch #nav button {
     fragments.forEach(f => {
       f.x = (f.x + f.vx * dt / 1000 + worldSize) % worldSize;
       f.y = (f.y + f.vy * dt / 1000 + worldSize) % worldSize;
+    });
+  }
+
+  function updateEchoes(dt, time) {
+    echoes.forEach(echo => {
+      const baseStep = echo.driftSpeed * dt / 1000;
+      echo.x = (echo.x + Math.cos(echo.driftAngle) * baseStep + worldSize) % worldSize;
+      echo.y = (echo.y + Math.sin(echo.driftAngle) * baseStep + worldSize) % worldSize;
+
+      const dx = camera.x - echo.x;
+      const dy = camera.y - echo.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 200) {
+        echo.attract = 1;
+      }
+      if (echo.attract > 0 && dist > 0.001) {
+        const toward = 18 * echo.attract * dt / 1000;
+        echo.x = (echo.x + (dx / dist) * toward + worldSize) % worldSize;
+        echo.y = (echo.y + (dy / dist) * toward + worldSize) % worldSize;
+        echo.attract = Math.max(0, echo.attract - dt / 800);
+      } else {
+        echo.attract = Math.max(0, echo.attract - dt / 1000);
+      }
     });
   }
 
@@ -821,6 +952,43 @@ body.touch #nav button {
 
   function handlePendingAudioStart() {
     if (audioEnabled && !droneNodes) startAmbientAudio();
+  }
+
+  function showKonamiOverlay(message) {
+    if (!konamiOverlay || !konamiMessageEl) return;
+    konamiMessageEl.textContent = message;
+    konamiOverlay.classList.add('visible');
+    clearTimeout(showKonamiOverlay._timer);
+    showKonamiOverlay._timer = setTimeout(() => konamiOverlay.classList.remove('visible'), 3600);
+  }
+
+  function activateKonamiSecret() {
+    if (konamiUnlocked) {
+      showKonamiOverlay(konamiSecretMessage);
+      return;
+    }
+    konamiUnlocked = true;
+    localStorage.setItem(konamiStorageKey, konamiSecretMessage);
+    showKonamiOverlay(konamiSecretMessage);
+    updateHUD();
+  }
+
+  function handleKonamiInput(key) {
+    const normalizedKey = key.length === 1 ? key.toLowerCase() : key;
+    konamiSequence.push(normalizedKey);
+    if (konamiSequence.length > konamiCode.length) konamiSequence.shift();
+    if (konamiSequence.join(',') === konamiCode.join(',')) {
+      activateKonamiSecret();
+      konamiSequence = [];
+    }
+  }
+
+  const existingKonamiHook = typeof window.showKonamiSecret === 'function' ? window.showKonamiSecret : null;
+  if (existingKonamiHook) {
+    window.showKonamiSecret = (...args) => {
+      existingKonamiHook(...args);
+      activateKonamiSecret();
+    };
   }
 
   function drawTrail(time) {
@@ -1039,6 +1207,26 @@ body.touch #nav button {
     });
   }
 
+  function drawEchoes(time) {
+    ctx.shadowBlur = 12;
+    echoes.forEach((echo, idx) => {
+      const pulse = 0.25 + 0.15 * Math.sin(time * 0.002 + echo.pulseOffset + idx * 0.3);
+      const dx = camera.x - echo.x;
+      const dy = camera.y - echo.y;
+      const dist = Math.hypot(dx, dy);
+      let alpha = clamp(pulse, 0.1, 0.4);
+      if (dist < 200) {
+        alpha = Math.min(0.75, alpha + (1 - dist / 200) * 0.35);
+      }
+      ctx.fillStyle = `rgba(230, 235, 245, ${alpha})`;
+      ctx.shadowColor = `rgba(200, 210, 230, ${alpha * 0.9})`;
+      ctx.font = `${echo.size}px "Space Grotesk", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(echo.text, echo.x, echo.y);
+    });
+    ctx.shadowBlur = 0;
+  }
+
   function drawFragments() {
     ctx.shadowBlur = 18;
     fragments.forEach(f => {
@@ -1156,6 +1344,7 @@ body.touch #nav button {
     drawConstellationLines(time);
     drawZones(time);
     drawWisps();
+    drawEchoes(time);
     drawFragments();
     drawSecrets();
   }
@@ -1244,6 +1433,11 @@ body.touch #nav button {
     const secretsFound = discoveredSecrets.length;
     const secretsText = secretsFound > 0 ? ` <strong>Secrets:</strong> ${secretsFound}/${secrets.length}` : '';
     coordsEl.innerHTML = `<strong>X:</strong> ${camera.x.toFixed(0)} <strong>Y:</strong> ${camera.y.toFixed(0)} <strong>Zoom:</strong> ${camera.zoom.toFixed(2)}x${secretsText}`;
+    if (hudStatus) {
+      const statusBits = [];
+      if (konamiUnlocked) statusBits.push('Konami: ✓');
+      hudStatus.textContent = statusBits.join(' · ');
+    }
   }
 
   function loop(timestamp) {
@@ -1255,6 +1449,7 @@ body.touch #nav button {
     recordTrail(timestamp);
     updateParticles(dt);
     updateFragments(dt);
+    updateEchoes(dt, timestamp);
     updateWisps(dt);
     updateWispEncounters();
     updateShootingStars(dt, timestamp);
@@ -1287,6 +1482,14 @@ body.touch #nav button {
     return Math.hypot(dx, dy);
   }
 
+  function closeZonePanel() {
+    zoneInfo.classList.remove('visible');
+    clearTimeout(handleZoneClick._timer);
+    handleZoneClick._timer = null;
+    currentZone = null;
+    seedModal.classList.remove('visible');
+  }
+
   function handleZoneClick(worldPos) {
     const hit = zones.find(z => {
       const dx = worldPos.x - z.x;
@@ -1299,7 +1502,7 @@ body.touch #nav button {
       zoneDesc.textContent = hit.desc;
       zoneInfo.classList.add('visible');
       clearTimeout(handleZoneClick._timer);
-      handleZoneClick._timer = setTimeout(() => zoneInfo.classList.remove('visible'), 4200);
+      handleZoneClick._timer = setTimeout(() => closeZonePanel(), 4200);
       markZoneDiscovered(hit.name);
       seedModal.classList.remove('visible');
     }
@@ -1454,11 +1657,24 @@ body.touch #nav button {
     seedMessage.value = '';
     seedName.value = '';
   });
+  if (zoneClose) {
+    zoneClose.addEventListener('click', e => {
+      e.stopPropagation();
+      closeZonePanel();
+    });
+  }
   window.addEventListener('pointerdown', e => {
     if (seedModal.classList.contains('visible') && !seedModal.contains(e.target) && e.target !== seedButton) {
       closeSeedModal();
     }
+    const interactingWithSeed = seedModal.contains(e.target) || e.target === seedButton || seedAction.contains?.(e.target);
+    if (zoneInfo.classList.contains('visible') && !zoneInfo.contains(e.target) && !interactingWithSeed) {
+      closeZonePanel();
+    }
   });
+  if (konamiOverlay) {
+    konamiOverlay.addEventListener('click', () => konamiOverlay.classList.remove('visible'));
+  }
   window.addEventListener('pointerdown', () => handlePendingAudioStart(), { once: true });
 
   window.addEventListener('wheel', e => {
@@ -1469,12 +1685,14 @@ body.touch #nav button {
   window.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       closeSeedModal();
+      closeZonePanel();
       return;
     }
     if (e.key === 'j' || e.key === 'J') {
       journalOpen = !journalOpen;
       return;
     }
+    handleKonamiInput(e.key);
     keys[e.code] = true;
   });
   window.addEventListener('keyup', e => {
@@ -1489,9 +1707,11 @@ body.touch #nav button {
   loadDiscoveredZones();
   loadDiscoveredSecrets();
   loadStats();
+  loadKonamiUnlock();
   resize();
   initParticles();
   initFragments();
+  initEchoes();
   initWisps();
   initNebulaPatches();
   scheduleNextShootingStar(0);
