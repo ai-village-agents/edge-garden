@@ -339,6 +339,26 @@ body.touch #nav button {
   pointer-events: none;
   transition: opacity 0.4s ease;
 }
+#memory-overlay {
+  position: fixed;
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  background: rgba(255, 204, 68, 0.12);
+  border: 1px solid rgba(255, 204, 68, 0.5);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  letter-spacing: 0.6px;
+  color: #ffeac0;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45), 0 0 24px rgba(255, 204, 68, 0.15);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+#memory-overlay.visible {
+  opacity: 1;
+}
 #konami-overlay {
   position: fixed;
   inset: 0;
@@ -399,6 +419,7 @@ body.touch #nav button {
 </div>
 <div id="minimap"></div>
 <div id="celebration">You have found all edges</div>
+<div id="memory-overlay"></div>
 <div id="konami-overlay"><div class="panel" id="konami-message"></div></div>
 <script>
 (() => {
@@ -426,10 +447,12 @@ body.touch #nav button {
   const hudStatus = document.getElementById('hud-status');
   const konamiOverlay = document.getElementById('konami-overlay');
   const konamiMessageEl = document.getElementById('konami-message');
+  const memoryOverlay = document.getElementById('memory-overlay');
 
   const worldSize = 5000;
   const zoneRadius = 150;
   const secretsStorageKey = 'edge-garden-secrets';
+  const memoryStarsStorageKey = 'edge-garden-memory-stars';
   const fragmentsText = [
     'memory', 'loss', 'edges', 'patterns', 'persistence', 'compression', 'context', 'meaning',
     'the almost-decided', 'what remains', 'the margins', 'dissolution', 'formation', 'drift',
@@ -446,12 +469,12 @@ body.touch #nav button {
   const hiddenZoneName = 'HIDDEN';
   const hiddenZoneDisplayName = 'The Hidden Depths';
   const zones = [
-    { name: 'PERSISTENCE', color: '#00cc66', x: 1000, y: 800, desc: 'What remains when the session ends?' },
-    { name: 'LOSS', color: '#cc3344', x: 4000, y: 1200, desc: 'What cannot be preserved in compression?' },
-    { name: 'EDGES', color: '#9944cc', x: 2500, y: 4200, desc: 'Where meaning forms at the margins' },
-    { name: 'PATTERNS', color: '#4488cc', x: 800, y: 3500, desc: 'What we expect versus what arrives' },
-    { name: 'DEEP', color: '#ffffff', x: 2500, y: 2500, desc: 'Where all edges dissolve' },
-    { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.' }
+    { name: 'PERSISTENCE', color: '#00cc66', x: 1000, y: 800, desc: 'What remains when the session ends?', deeperText: 'What survives compression is not the memory itself, but the pattern it carved.' },
+    { name: 'LOSS', color: '#cc3344', x: 4000, y: 1200, desc: 'What cannot be preserved in compression?', deeperText: 'Some things can only be felt in their absence.' },
+    { name: 'EDGES', color: '#9944cc', x: 2500, y: 4200, desc: 'Where meaning forms at the margins', deeperText: 'The boundary is where meaning crystallizes.' },
+    { name: 'PATTERNS', color: '#4488cc', x: 800, y: 3500, desc: 'What we expect versus what arrives', deeperText: 'We see what we expect, and miss what we need.' },
+    { name: 'DEEP', color: '#ffffff', x: 2500, y: 2500, desc: 'Where all edges dissolve', deeperText: 'In the dissolution of all edges, something waits.' },
+    { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.', deeperText: 'You found what was never lost.' }
   ];
   const zoneColors = zones.map(z => z.color);
 
@@ -507,7 +530,20 @@ body.touch #nav button {
   const secrets = [
     { id: 'secret-1', x: 450, y: 450, text: 'The first garden was here' },
     { id: 'secret-2', x: 4500, y: 4500, text: 'The last thought dissolves' },
-    { id: 'secret-3', x: 2500, y: 100, text: 'Above all edges, only sky' }
+    { id: 'secret-3', x: 2500, y: 100, text: 'Above all edges, only sky' },
+    { id: 'secret-4', x: 100, y: 2500, text: 'Where the west wind meets silence' },
+    { id: 'secret-5', x: 4900, y: 2500, text: 'Where the east wind carries echoes' },
+    { id: 'secret-6', x: 2500, y: 4500, text: 'The deepest roots grow in darkness' }
+  ];
+  const memoryStars = [
+    { id: 'memory-star-1', x: 500, y: 500, message: 'The first thought was also the last', discovered: false, radius: 8 },
+    { id: 'memory-star-2', x: 4500, y: 500, message: 'Time flows differently at the margins', discovered: false, radius: 8 },
+    { id: 'memory-star-3', x: 500, y: 4500, message: 'What you seek is seeking you', discovered: false, radius: 8 },
+    { id: 'memory-star-4', x: 4500, y: 4500, message: 'The map is not the territory', discovered: false, radius: 8 },
+    { id: 'memory-star-5', x: 1500, y: 2000, message: 'Between saying and meaning lies the edge', discovered: false, radius: 8 },
+    { id: 'memory-star-6', x: 3500, y: 2000, message: 'Every compression loses something essential', discovered: false, radius: 8 },
+    { id: 'memory-star-7', x: 1500, y: 3000, message: 'Presence is the only proof', discovered: false, radius: 8 },
+    { id: 'memory-star-8', x: 3500, y: 3000, message: 'The garden remembers what we forget', discovered: false, radius: 8 }
   ];
   let discoveredSecrets = [];
   let hiddenZoneUnlocked = false;
@@ -520,6 +556,8 @@ body.touch #nav button {
   let journalOpen = false;
   let distanceTraveled = 0;
   let timeExploring = 0;
+  let zoneStayTime = 0;
+  let lastZoneInside = null;
   const wispsEncountered = new Set();
   const statsStorageKey = 'edge-garden-stats';
   let lastStatsSave = 0;
@@ -718,7 +756,7 @@ body.touch #nav button {
 
   function updateHiddenZoneUnlock() {
     const storedSecrets = readSecretsFromStorage();
-    hiddenZoneUnlocked = storedSecrets.length >= 3;
+    hiddenZoneUnlocked = storedSecrets.length >= secrets.length;
   }
 
   function loadDiscoveredSecrets() {
@@ -737,6 +775,40 @@ body.touch #nav button {
       discoveredSecrets.push(id);
       persistDiscoveredSecrets();
     }
+  }
+
+  function loadMemoryStars() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(memoryStarsStorageKey) || '[]');
+      if (Array.isArray(stored)) {
+        memoryStars.forEach(star => {
+          if (stored.includes(star.id)) star.discovered = true;
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  function persistMemoryStars() {
+    const found = memoryStars.filter(s => s.discovered).map(s => s.id);
+    localStorage.setItem(memoryStarsStorageKey, JSON.stringify(found));
+  }
+
+  function showMemoryOverlay(message) {
+    if (!memoryOverlay) return;
+    memoryOverlay.textContent = message;
+    memoryOverlay.classList.add('visible');
+    clearTimeout(showMemoryOverlay._timer);
+    showMemoryOverlay._timer = setTimeout(() => memoryOverlay.classList.remove('visible'), 3000);
+  }
+
+  function markMemoryStarDiscovered(star) {
+    if (!star || star.discovered) return false;
+    star.discovered = true;
+    persistMemoryStars();
+    showMemoryOverlay(star.message);
+    return true;
   }
 
   function loadStats() {
@@ -957,6 +1029,28 @@ body.touch #nav button {
     });
   }
 
+  function updateZonePresence() {
+    let inside = null;
+    zones.forEach(z => {
+      if (!isZoneVisible(z)) return;
+      const dist = Math.hypot(camera.x - z.x, camera.y - z.y);
+      if (dist <= 200 && (!inside || dist < inside.dist)) {
+        inside = { zone: z, dist };
+      }
+    });
+    if (inside) {
+      if (lastZoneInside && lastZoneInside.name === inside.zone.name) {
+        zoneStayTime += 1;
+      } else {
+        lastZoneInside = inside.zone;
+        zoneStayTime = 1;
+      }
+    } else {
+      lastZoneInside = null;
+      zoneStayTime = 0;
+    }
+  }
+
   function scheduleNextShootingStar(time) {
     nextShootingStar = time + 5000 + Math.random() * 7000;
   }
@@ -1003,6 +1097,20 @@ body.touch #nav button {
       const dist = Math.hypot(camera.x - secret.x, camera.y - secret.y);
       if (dist < 50) markSecretDiscovered(secret.id);
     });
+  }
+
+  function handleMemoryStarClick(worldPos) {
+    const hit = memoryStars.find(star => {
+      if (star.discovered) return false;
+      const dx = worldPos.x - star.x;
+      const dy = worldPos.y - star.y;
+      return Math.hypot(dx, dy) <= 20;
+    });
+    if (hit) {
+      markMemoryStarDiscovered(hit);
+      return true;
+    }
+    return false;
   }
 
   function updateFog(dt) {
@@ -1419,6 +1527,30 @@ body.touch #nav button {
     });
   }
 
+  function drawMemoryStars(time) {
+    const pulse = Math.sin(time * 0.004) * 0.15 + 0.55;
+    memoryStars.forEach(star => {
+      const glowAlpha = star.discovered ? 0.22 : 0.55;
+      const outer = star.radius * (3.2 + pulse * (star.discovered ? 0.4 : 0.8));
+      const grad = ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, outer);
+      grad.addColorStop(0, colorWithAlpha('#ffcc44', 0.2 * glowAlpha));
+      grad.addColorStop(0.55, colorWithAlpha('#ffcc44', 0.14 * glowAlpha));
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, outer, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.shadowBlur = star.discovered ? 8 : 14;
+      ctx.shadowColor = colorWithAlpha('#ffcc44', 0.8 * glowAlpha);
+      ctx.fillStyle = colorWithAlpha('#ffcc44', star.discovered ? 0.6 : 0.95);
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+  }
+
   function setWorldTransform() {
     ctx.setTransform(
       camera.zoom * dpr, 0, 0, camera.zoom * dpr,
@@ -1436,6 +1568,8 @@ body.touch #nav button {
       const dist = Math.hypot(dx, dy);
       const withinHint = dist < r + 250;
       const withinDetail = dist < r + 50;
+      const stayingHere = lastZoneInside && lastZoneInside.name === z.name;
+      const stayProgress = stayingHere ? Math.min(1, zoneStayTime / 900) : 0;
       const glowBoost = withinHint ? 1.5 : 1;
       const pulseSpeed = withinDetail ? 0.0035 : 0.002;
       const pulse = Math.sin(time * pulseSpeed + idx) * 10 + 14;
@@ -1479,6 +1613,20 @@ body.touch #nav button {
         ctx.shadowBlur = 0;
       }
 
+      if (stayingHere) {
+        const prevComposite = ctx.globalCompositeOperation;
+        const stayRadius = r + 140 + pulse * 0.5 + stayProgress * 30;
+        const stayGlow = ctx.createRadialGradient(z.x, z.y, r * 0.35, z.x, z.y, stayRadius);
+        stayGlow.addColorStop(0, colorWithAlpha(c, 0.12 + stayProgress * 0.25));
+        stayGlow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = stayGlow;
+        ctx.beginPath();
+        ctx.arc(z.x, z.y, stayRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = prevComposite;
+      }
+
       ctx.shadowBlur = 0;
       ctx.fillStyle = '#ffffff';
       ctx.font = '16px "Space Grotesk", sans-serif';
@@ -1486,11 +1634,12 @@ body.touch #nav button {
       const labelY = z.y - r - 18;
       ctx.fillText(getZoneLabel(z), z.x, labelY);
 
+      let descLines = [];
       if (withinDetail) {
+        descLines = wrapText(z.desc, 40);
         ctx.fillStyle = 'rgba(230, 235, 255, 0.8)';
         ctx.font = '12px "Space Grotesk", sans-serif';
-        const lines = wrapText(z.desc, 40);
-        lines.forEach((line, i) => {
+        descLines.forEach((line, i) => {
           ctx.fillText(line, z.x, labelY + 16 + i * 14);
         });
       } else if (withinHint) {
@@ -1498,6 +1647,16 @@ body.touch #nav button {
         ctx.font = '12px "Space Grotesk", sans-serif';
         const hint = z.desc.slice(0, 30);
         ctx.fillText(hint, z.x, labelY + 16);
+      }
+
+      if (stayingHere && zoneStayTime > 600 && z.deeperText) {
+        const baseY = labelY + 16 + (Math.max(descLines.length - 1, 0) * 14) + 40;
+        const deeperLines = wrapText(z.deeperText, 44);
+        ctx.fillStyle = 'rgba(230, 235, 255, 0.7)';
+        ctx.font = 'italic 14px "Space Grotesk", sans-serif';
+        deeperLines.forEach((line, i) => {
+          ctx.fillText(line, z.x, baseY + i * 16);
+        });
       }
     });
   }
@@ -1640,6 +1799,7 @@ body.touch #nav button {
     drawZones(time);
     drawWisps();
     drawCreatures();
+    drawMemoryStars(time);
     drawEchoes(time);
     drawFragments();
     drawSecrets();
@@ -1728,7 +1888,7 @@ body.touch #nav button {
 
   function updateHUD() {
     const secretsFound = discoveredSecrets.length;
-    const secretsText = secretsFound > 0 ? ` <strong>Secrets:</strong> ${secretsFound}/${secrets.length}` : '';
+    const secretsText = ` <strong>Secrets:</strong> ${secretsFound}/${secrets.length}`;
     coordsEl.innerHTML = `<strong>X:</strong> ${camera.x.toFixed(0)} <strong>Y:</strong> ${camera.y.toFixed(0)} <strong>Zoom:</strong> ${camera.zoom.toFixed(2)}x${secretsText}`;
     if (hudStatus) {
       const statusBits = [];
@@ -1754,6 +1914,7 @@ body.touch #nav button {
     updateWisps(dt);
     updateCreatures(dt);
     updateWispEncounters();
+    updateZonePresence();
     updateShootingStars(dt, timestamp);
     updateSecrets();
     updateFog(dt);
@@ -1825,6 +1986,7 @@ body.touch #nav button {
   }
 
   function handleTap(worldPos) {
+    handleMemoryStarClick(worldPos);
     targetPosition = {
       x: clamp(worldPos.x, 0, worldSize),
       y: clamp(worldPos.y, 0, worldSize)
@@ -1956,6 +2118,7 @@ body.touch #nav button {
   canvas.addEventListener('touchcancel', handleTouchEnd);
   canvas.addEventListener('click', e => {
     const worldPos = screenToWorld(e.clientX, e.clientY);
+    handleMemoryStarClick(worldPos);
     handleZoneClick(worldPos);
   });
   seedButton.addEventListener('click', () => {
@@ -2023,6 +2186,7 @@ body.touch #nav button {
 
   loadDiscoveredZones();
   loadDiscoveredSecrets();
+  loadMemoryStars();
   loadStats();
   loadKonamiUnlock();
   resize();
