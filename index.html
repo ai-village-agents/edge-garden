@@ -1003,6 +1003,12 @@ body.meditation-mode #nav {
   const ripples = [];
   const trailPoints = [];
   const maxTrail = 50;
+  const cursorTrail = [];
+  const maxCursorTrail = 12;
+  let cursorPos = { x: 0, y: 0 };
+  let cursorInitialized = false;
+  let lastCursorMoveTime = 0;
+  let lastCursorSampleTime = 0;
   const explorationPath = [];
   const maxExplorationPath = 500;
   const wisps = [];
@@ -1600,6 +1606,61 @@ body.meditation-mode #nav {
     }
   }
 
+  function addCursorTrailParticle(x, y, vx, vy, time) {
+    const baseRadius = 4 + Math.random() * 4;
+    cursorTrail.push({
+      x,
+      y,
+      vx: (vx || 0) * 18,
+      vy: (vy || 0) * 18,
+      birth: time,
+      life: meditationMode ? 700 : 900,
+      radius: baseRadius
+    });
+    if (cursorTrail.length > maxCursorTrail) cursorTrail.shift();
+  }
+
+  function handleCursorMove(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    const now = performance.now ? performance.now() : Date.now();
+    if (!cursorInitialized) {
+      cursorPos.x = x;
+      cursorPos.y = y;
+      cursorInitialized = true;
+      lastCursorSampleTime = now;
+      return;
+    }
+    const dx = x - cursorPos.x;
+    const dy = y - cursorPos.y;
+    const dist = Math.hypot(dx, dy);
+    const elapsed = lastCursorSampleTime ? now - lastCursorSampleTime : 16;
+    cursorPos.x = x;
+    cursorPos.y = y;
+    lastCursorSampleTime = now;
+    if (dist < 0.5) return;
+    lastCursorMoveTime = now;
+    const vx = elapsed > 0 ? dx / elapsed : 0;
+    const vy = elapsed > 0 ? dy / elapsed : 0;
+    addCursorTrailParticle(x, y, vx, vy, now);
+  }
+
+  function updateCursorTrail(dt, time) {
+    if (!cursorTrail.length) return;
+    const frameScale = dt ? dt / 16.6667 : 1;
+    for (let i = cursorTrail.length - 1; i >= 0; i--) {
+      const p = cursorTrail[i];
+      p.x += p.vx * frameScale;
+      p.y += p.vy * frameScale;
+      p.vx *= 0.86;
+      p.vy *= 0.86;
+      if (time - p.birth > p.life) {
+        cursorTrail.splice(i, 1);
+      }
+    }
+  }
+
   function updateCamera(dt) {
     if (journalOpen) return 0;
     const prevX = camera.x;
@@ -2002,6 +2063,24 @@ body.meditation-mode #nav {
       g: (num >> 8) & 255,
       b: num & 255
     };
+  }
+
+  function lerpColor(a, b, t) {
+    return {
+      r: Math.round(lerp(a.r, b.r, t)),
+      g: Math.round(lerp(a.g, b.g, t)),
+      b: Math.round(lerp(a.b, b.b, t))
+    };
+  }
+
+  function getCursorTrailColor(t) {
+    const c1 = hexToRgb('#00ffff');
+    const c2 = hexToRgb('#9944cc');
+    const c3 = hexToRgb('#ffffff');
+    if (t <= 0.5) {
+      return lerpColor(c1, c2, t / 0.5);
+    }
+    return lerpColor(c2, c3, (t - 0.5) / 0.5);
   }
 
   function getNextWhisperFrames() {
@@ -2484,6 +2563,30 @@ body.meditation-mode #nav {
       existingKonamiHook(...args);
       activateKonamiSecret();
     };
+  }
+
+  function drawCursorTrail(time) {
+    if (!cursorTrail.length) return;
+    const movementAlpha = clamp(1 - Math.max(0, time - lastCursorMoveTime) / 180, 0, 1);
+    if (movementAlpha <= 0) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.globalCompositeOperation = 'screen';
+    cursorTrail.forEach((p, i) => {
+      const age = clamp((time - p.birth) / p.life, 0, 1);
+      const orderT = cursorTrail.length > 1 ? 1 - i / (cursorTrail.length - 1) : 1;
+      const color = getCursorTrailColor(orderT);
+      const baseAlpha = (1 - age) * 0.75 * movementAlpha;
+      const alpha = baseAlpha * (meditationMode ? 0.55 : 1);
+      const size = Math.max(1.2, p.radius * (1 - age * 0.6) * (meditationMode ? 0.7 : 1));
+      ctx.shadowBlur = 12 * (meditationMode ? 0.7 : 1);
+      ctx.shadowColor = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha * 0.8})`;
+      ctx.fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.shadowBlur = 0;
+    ctx.globalCompositeOperation = 'source-over';
   }
 
   function drawTrail(time) {
@@ -3468,6 +3571,7 @@ body.meditation-mode #nav {
     updateRain(scaledDt, windVector);
     updateWhispers();
     updateRipples(timestamp);
+    updateCursorTrail(scaledDt, timestamp);
     updateCelebrationParticles(scaledDt);
     if (timestamp - lastStatsSave > 500) {
       persistStats();
@@ -3475,6 +3579,7 @@ body.meditation-mode #nav {
     }
     drawBackground();
     drawWorld(timestamp);
+    drawCursorTrail(timestamp);
     drawCelebrationParticles();
     if (!meditationMode) drawMinimap();
     if (!meditationMode) drawJournalOverlay();
@@ -3672,9 +3777,12 @@ body.meditation-mode #nav {
     targetPosition = null;
     lastPointer.x = e.clientX;
     lastPointer.y = e.clientY;
+    handleCursorMove(e.clientX, e.clientY);
   });
   window.addEventListener('pointermove', e => {
-    if (e.pointerType === 'touch' || !dragging) return;
+    if (e.pointerType === 'touch') return;
+    handleCursorMove(e.clientX, e.clientY);
+    if (!dragging) return;
     const dx = e.clientX - lastPointer.x;
     const dy = e.clientY - lastPointer.y;
     camera.x = clamp(camera.x - dx / camera.zoom, 0, worldSize);
