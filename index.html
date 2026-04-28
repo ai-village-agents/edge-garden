@@ -649,7 +649,29 @@ body.touch #nav button {
   text-align: center;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35), 0 0 18px rgba(51, 68, 85, 0.25);
 }
+#ruin-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 252px;
+  transform: translateX(-50%) translateY(10px);
+  background: rgba(102, 85, 68, 0.16);
+  border: 1px solid rgba(102, 85, 68, 0.5);
+  color: #f1e7dc;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  text-align: center;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35), 0 0 18px rgba(102, 85, 68, 0.25);
+}
 #island-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+#ruin-toast.visible {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
@@ -747,6 +769,7 @@ body.meditation-mode #konami-overlay,
 body.meditation-mode #portal-overlay,
 body.meditation-mode #poem-overlay,
 body.meditation-mode #monument-toast,
+body.meditation-mode #ruin-toast,
 body.meditation-mode #fragment-toast,
 body.meditation-mode #constellation-toast,
 body.meditation-mode #island-toast,
@@ -824,6 +847,7 @@ body.meditation-mode #nav {
 </div>
 <div id="monument-toast"></div>
 <div id="island-toast"></div>
+<div id="ruin-toast"></div>
 <div id="fragment-toast">Fragment collected</div>
 <div id="constellation-toast">Star discovered</div>
 <div id="memory-well-toast"></div>
@@ -869,6 +893,7 @@ body.meditation-mode #nav {
   const timeIndicator = document.getElementById('time-indicator');
   const monumentToast = document.getElementById('monument-toast');
   const islandToast = document.getElementById('island-toast');
+  const ruinToast = document.getElementById('ruin-toast');
   const fragmentToast = document.getElementById('fragment-toast');
   const constellationToast = document.getElementById('constellation-toast');
   const memoryWellToast = document.getElementById('memory-well-toast');
@@ -886,6 +911,7 @@ body.meditation-mode #nav {
   const zoneRadius = 150;
   const monumentsStorageKey = 'edge-garden-monuments';
   const islandsStorageKey = 'edge-garden-islands';
+  const ruinsStorageKey = 'edge-garden-ruins';
   const secretsStorageKey = 'edge-garden-secrets';
   const memoryStarsStorageKey = 'edge-garden-memory-stars';
   const constellationStarsStorageKey = 'edge-garden-stars';
@@ -1152,6 +1178,14 @@ body.meditation-mode #nav {
     { id: 'island-7', x: 2000, y: 1800, size: 40, color: '#2e4258', name: 'Memory Ledge', discovered: false },
     { id: 'island-8', x: 3500, y: 4200, size: 50, color: '#3b4e62', name: 'Threshold Rock', discovered: false }
   ];
+  const ancientRuins = [
+    { id: 'ruin-1', x: 700, y: 2800, inscription: 'What remains is not what was', discovered: false },
+    { id: 'ruin-2', x: 3300, y: 1500, inscription: 'The pattern persists beyond the frame', discovered: false },
+    { id: 'ruin-3', x: 1800, y: 3800, inscription: 'Every edge was once a center', discovered: false },
+    { id: 'ruin-4', x: 4100, y: 2900, inscription: 'Memory is the shadow of attention', discovered: false },
+    { id: 'ruin-5', x: 1100, y: 600, inscription: 'Between moments, eternity waits', discovered: false },
+    { id: 'ruin-6', x: 3900, y: 4100, inscription: 'The unobserved still exists', discovered: false }
+  ];
   const secrets = [
     { id: 'secret-1', x: 450, y: 450, text: 'The first garden was here' },
     { id: 'secret-2', x: 4500, y: 4500, text: 'The last thought dissolves' },
@@ -1213,6 +1247,7 @@ body.meditation-mode #nav {
     { x: 4200, y: 3200, text: 'to an unknown shore', collected: false }
   ];
   let discoveredMonuments = [];
+  let discoveredRuins = [];
   let discoveredIslands = [];
   let discoveredSecrets = [];
   let discoveredCorners = [];
@@ -1579,6 +1614,37 @@ body.meditation-mode #nav {
     return true;
   }
 
+  function loadDiscoveredRuins() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(ruinsStorageKey) || '[]');
+      if (Array.isArray(stored)) {
+        discoveredRuins = stored;
+        ancientRuins.forEach(ruin => {
+          if (stored.includes(ruin.id)) ruin.discovered = true;
+        });
+      } else {
+        discoveredRuins = [];
+      }
+    } catch (e) {
+      discoveredRuins = [];
+    }
+  }
+
+  function persistDiscoveredRuins() {
+    const unique = Array.from(new Set(discoveredRuins));
+    discoveredRuins = unique;
+    localStorage.setItem(ruinsStorageKey, JSON.stringify(unique));
+  }
+
+  function markRuinDiscovered(ruin) {
+    if (!ruin || discoveredRuins.includes(ruin.id)) return false;
+    discoveredRuins.push(ruin.id);
+    ruin.discovered = true;
+    persistDiscoveredRuins();
+    updateHUD();
+    return true;
+  }
+
   function readSecretsFromStorage() {
     try {
       const stored = localStorage.getItem(secretsStorageKey);
@@ -1748,6 +1814,14 @@ body.meditation-mode #nav {
     islandToast.classList.add('visible');
     clearTimeout(showIslandToast._timer);
     showIslandToast._timer = setTimeout(() => islandToast.classList.remove('visible'), 2000);
+  }
+
+  function showRuinToast(ruin) {
+    if (!ruinToast || !ruin) return;
+    ruinToast.textContent = ruin.inscription || 'Ancient ruin revealed';
+    ruinToast.classList.add('visible');
+    clearTimeout(showRuinToast._timer);
+    showRuinToast._timer = setTimeout(() => ruinToast.classList.remove('visible'), 2000);
   }
 
   function showFragmentCollectedToast() {
@@ -2347,6 +2421,21 @@ body.meditation-mode #nav {
       island.float = Math.sin(bobTime / 2000 + idx);
       if (island.inRange && markIslandDiscovered(island)) {
         showIslandToast(island);
+      }
+    });
+  }
+
+  function updateRuins(time) {
+    const bobTime = time || performance.now();
+    ancientRuins.forEach((ruin, idx) => {
+      const dx = camera.x - ruin.x;
+      const dy = camera.y - ruin.y;
+      const dist = Math.hypot(dx, dy);
+      ruin.inRange = dist <= 60;
+      ruin.proximity = clamp(1 - dist / 200, 0, 1);
+      ruin.wobble = Math.sin(bobTime * 0.002 + idx) * 2;
+      if (ruin.inRange && markRuinDiscovered(ruin)) {
+        showRuinToast(ruin);
       }
     });
   }
@@ -3763,6 +3852,116 @@ body.meditation-mode #nav {
     });
   }
 
+  function drawRuins(time) {
+    const t = time || 0;
+    ancientRuins.forEach((ruin, idx) => {
+      const wobble = typeof ruin.wobble === 'number' ? ruin.wobble : Math.sin(t * 0.002 + idx) * 2;
+      const x = ruin.x;
+      const y = ruin.y + wobble;
+      const width = 26;
+      const height = 62;
+      const proximity = ruin.proximity || 0;
+      ctx.save();
+      ctx.shadowBlur = 12 + proximity * 18 + (ruin.discovered ? 6 : 0);
+      ctx.shadowColor = colorWithAlpha('#665544', 0.35 + proximity * 0.3);
+      const grad = ctx.createLinearGradient(x, y - height, x, y);
+      grad.addColorStop(0, colorWithAlpha('#7a6752', 0.78));
+      grad.addColorStop(1, colorWithAlpha('#4f3f33', 0.78));
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(x - width * 0.55, y);
+      ctx.lineTo(x + width * 0.55, y);
+      ctx.lineTo(x + width * 0.46, y - height * 0.4);
+      ctx.lineTo(x + width * 0.3, y - height * 0.76);
+      ctx.lineTo(x + width * 0.04, y - height);
+      ctx.lineTo(x - width * 0.18, y - height * 0.82);
+      ctx.lineTo(x - width * 0.4, y - height * 0.55);
+      ctx.lineTo(x - width * 0.52, y - height * 0.26);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = colorWithAlpha('#2f2620', 0.4 + proximity * 0.3);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x - width * 0.32, y - height * 0.2);
+      ctx.lineTo(x - width * 0.12, y - height * 0.52);
+      ctx.moveTo(x + width * 0.1, y - height * 0.28);
+      ctx.lineTo(x + width * 0.24, y - height * 0.65);
+      ctx.stroke();
+
+      ctx.globalAlpha = 0.22 + proximity * 0.25;
+      ctx.strokeStyle = '#9a8b7a';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(x - width * 0.42, y - height * 0.38);
+      ctx.lineTo(x - width * 0.1, y - height * 0.34);
+      ctx.moveTo(x + width * 0.12, y - height * 0.56);
+      ctx.lineTo(x + width * 0.38, y - height * 0.48);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      if (ruin.discovered) {
+        const runeGlow = 0.5 + proximity * 0.6;
+        ctx.shadowBlur = 14 + proximity * 10;
+        ctx.shadowColor = colorWithAlpha('#cfe9ff', runeGlow * 0.5);
+        ctx.strokeStyle = colorWithAlpha('#cfe9ff', runeGlow * 0.7);
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(x - width * 0.24, y - height * 0.26);
+        ctx.lineTo(x - width * 0.05, y - height * 0.32);
+        ctx.lineTo(x - width * 0.12, y - height * 0.46);
+        ctx.moveTo(x + width * 0.06, y - height * 0.18);
+        ctx.lineTo(x + width * 0.08, y - height * 0.42);
+        ctx.moveTo(x + width * 0.18, y - height * 0.54);
+        ctx.lineTo(x + width * 0.28, y - height * 0.62);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      const dist = Math.hypot(camera.x - ruin.x, camera.y - ruin.y);
+      if (dist <= 60) {
+        const text = ruin.inscription;
+        ctx.save();
+        ctx.font = '14px "Space Grotesk", sans-serif';
+        ctx.textAlign = 'center';
+        const padding = 10;
+        const metrics = ctx.measureText(text);
+        const boxW = metrics.width + padding * 2;
+        const boxH = 34;
+        const bx = x - boxW / 2;
+        const by = y - height - boxH - 10;
+        ctx.fillStyle = 'rgba(18, 18, 24, 0.82)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        const r = 10;
+        ctx.moveTo(bx + r, by);
+        ctx.lineTo(bx + boxW - r, by);
+        ctx.quadraticCurveTo(bx + boxW, by, bx + boxW, by + r);
+        ctx.lineTo(bx + boxW, by + boxH - r);
+        ctx.quadraticCurveTo(bx + boxW, by + boxH, bx + boxW - r, by + boxH);
+        ctx.lineTo(bx + r, by + boxH);
+        ctx.quadraticCurveTo(bx, by + boxH, bx, by + boxH - r);
+        ctx.lineTo(bx, by + r);
+        ctx.quadraticCurveTo(bx, by, bx + r, by);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x - 6, by + boxH);
+        ctx.lineTo(x, by + boxH + 8);
+        ctx.lineTo(x + 6, by + boxH);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#f1e7dc';
+        ctx.fillText(text, x, by + boxH / 2 + 4);
+        ctx.restore();
+      }
+      ctx.restore();
+    });
+  }
+
   function drawMonuments(time) {
     const pulse = Math.sin(time * 0.004) * 0.08 + 0.22;
     monuments.forEach((mon, idx) => {
@@ -3953,6 +4152,7 @@ body.meditation-mode #nav {
     drawRain(ctx);
     drawZones(time);
     drawMemoryWell(time);
+    drawRuins(time);
     drawFloatingIslands(time);
     drawMonuments(time);
     drawRipples(time);
@@ -4146,7 +4346,8 @@ body.meditation-mode #nav {
     const fragmentText = fragmentsFound ? ` <strong>Fragments:</strong> ${fragmentsFound}/${thoughtFragments.length}` : '';
     const cornersText = ` <strong>Corners:</strong> ${discoveredCorners.length}/${cornerFragments.length}`;
     const islandsText = ` <strong>Islands:</strong> ${discoveredIslands.length}/${floatingIslands.length}`;
-    coordsEl.innerHTML = `<strong>X:</strong> ${camera.x.toFixed(0)} <strong>Y:</strong> ${camera.y.toFixed(0)} <strong>Zoom:</strong> ${camera.zoom.toFixed(2)}x${secretsText}${monumentsText}${fragmentText}${cornersText}${islandsText}`;
+    const ruinsText = ` <strong>Ruins:</strong> ${discoveredRuins.length}/${ancientRuins.length}`;
+    coordsEl.innerHTML = `<strong>X:</strong> ${camera.x.toFixed(0)} <strong>Y:</strong> ${camera.y.toFixed(0)} <strong>Zoom:</strong> ${camera.zoom.toFixed(2)}x${secretsText}${monumentsText}${fragmentText}${cornersText}${islandsText}${ruinsText}`;
     if (hudStatus) {
       const statusBits = [];
       const discoveredStars = constellationStars.filter(s => s.discovered).length;
@@ -4191,6 +4392,7 @@ body.meditation-mode #nav {
     updateSecrets();
     updateMonuments();
     updateIslands(timestamp);
+    updateRuins(timestamp);
     updateFog(scaledDt);
     updateAurora(scaledDt);
     updateRain(scaledDt, windVector);
@@ -4540,6 +4742,7 @@ body.meditation-mode #nav {
   loadDiscoveredCorners();
   loadDiscoveredMonuments();
   loadDiscoveredIslands();
+  loadDiscoveredRuins();
   loadConstellationStars();
   loadMemoryStars();
   loadMemoryWellDiscovery();
