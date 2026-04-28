@@ -391,6 +391,12 @@ body {
   let droneNodes = null;
   let audioEnabled = false;
   const audioStorageKey = 'edge-garden-audio';
+  let journalOpen = false;
+  let distanceTraveled = 0;
+  let timeExploring = 0;
+  const wispsEncountered = new Set();
+  const statsStorageKey = 'edge-garden-stats';
+  let lastStatsSave = 0;
 
   function resize() {
     width = window.innerWidth;
@@ -522,6 +528,31 @@ body {
     }
   }
 
+  function loadStats() {
+    try {
+      const raw = localStorage.getItem(statsStorageKey);
+      const parsed = JSON.parse(raw || '{}');
+      if (typeof parsed.distanceTraveled === 'number') distanceTraveled = parsed.distanceTraveled;
+      if (typeof parsed.timeExploring === 'number') timeExploring = parsed.timeExploring;
+      if (Array.isArray(parsed.wispsEncountered)) {
+        parsed.wispsEncountered.forEach(i => wispsEncountered.add(i));
+      }
+    } catch (e) {
+      distanceTraveled = 0;
+      timeExploring = 0;
+      wispsEncountered.clear();
+    }
+  }
+
+  function persistStats() {
+    const data = {
+      distanceTraveled,
+      timeExploring,
+      wispsEncountered: Array.from(wispsEncountered)
+    };
+    localStorage.setItem(statsStorageKey, JSON.stringify(data));
+  }
+
   function recordTrail(time) {
     const last = trailPoints[trailPoints.length - 1];
     const dx = last ? camera.x - last.x : 0;
@@ -535,6 +566,9 @@ body {
   }
 
   function updateCamera(dt) {
+    if (journalOpen) return 0;
+    const prevX = camera.x;
+    const prevY = camera.y;
     const moveBase = 380;
     const speed = moveBase * dt / 1000 / camera.zoom;
     let mx = 0;
@@ -550,6 +584,7 @@ body {
     }
     camera.x = Math.max(0, Math.min(worldSize, camera.x));
     camera.y = Math.max(0, Math.min(worldSize, camera.y));
+    return Math.hypot(camera.x - prevX, camera.y - prevY);
   }
 
   function updateParticles(dt) {
@@ -590,6 +625,14 @@ body {
       w.y = (w.y + w.vy * dt / 1000 + worldSize) % worldSize;
       w.trail.push({ x: w.x, y: w.y });
       if (w.trail.length > 18) w.trail.shift();
+    });
+  }
+
+  function updateWispEncounters() {
+    wisps.forEach((w, i) => {
+      if (wispsEncountered.has(i)) return;
+      const dist = Math.hypot(camera.x - w.x, camera.y - w.y);
+      if (dist <= 100) wispsEncountered.add(i);
     });
   }
 
@@ -971,6 +1014,104 @@ body {
     ctx.shadowBlur = 0;
   }
 
+  function formatTime(ms) {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (minutes >= 60) {
+      const hours = Math.floor(minutes / 60);
+      const remMinutes = minutes % 60;
+      return `${hours}h ${remMinutes}m`;
+    }
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
+  }
+
+  function drawJournalOverlay() {
+    if (!journalOpen) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const panelWidth = Math.min(500, width - 40);
+    const panelHeight = Math.min(400, height - 40);
+    const px = (width - panelWidth) / 2;
+    const py = (height - panelHeight) / 2;
+    ctx.fillStyle = 'rgba(10, 10, 15, 0.9)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.lineWidth = 1;
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(px, py, panelWidth, panelHeight);
+    ctx.shadowBlur = 0;
+    ctx.strokeRect(px, py, panelWidth, panelHeight);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '22px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('DISCOVERY JOURNAL', px + 22, py + 36);
+
+    const sectionStartX = px + 22;
+    let cursorY = py + 66;
+
+    function drawSection(title) {
+      ctx.fillStyle = '#e6e6f0';
+      ctx.font = '14px "Space Grotesk", sans-serif';
+      ctx.fillText(title, sectionStartX, cursorY);
+      cursorY += 18;
+    }
+
+    function drawEmpty() {
+      ctx.fillStyle = '#8a8aa0';
+      ctx.font = 'italic 12px "Space Grotesk", sans-serif';
+      ctx.fillText('None yet...', sectionStartX + 6, cursorY);
+      cursorY += 18;
+    }
+
+    drawSection('ZONES DISCOVERED');
+    if (discoveredZones.length) {
+      discoveredZones.forEach(name => {
+        const z = zones.find(zone => zone.name === name);
+        const color = z ? z.color : '#9ad1ff';
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(sectionStartX + 6, cursorY - 6, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#e6e6f0';
+        ctx.font = '13px "Space Grotesk", sans-serif';
+        ctx.fillText(name, sectionStartX + 18, cursorY);
+        cursorY += 18;
+      });
+    } else {
+      drawEmpty();
+    }
+
+    cursorY += 10;
+    drawSection('SECRETS FOUND');
+    if (discoveredSecrets.length) {
+      discoveredSecrets.forEach(id => {
+        const info = secrets.find(s => s.id === id);
+        const label = info ? info.text : id;
+        ctx.fillStyle = '#e6e6f0';
+        ctx.font = '13px "Space Grotesk", sans-serif';
+        ctx.fillText(label, sectionStartX + 6, cursorY);
+        cursorY += 18;
+      });
+    } else {
+      drawEmpty();
+    }
+
+    cursorY += 10;
+    drawSection('STATISTICS');
+    ctx.fillStyle = '#e6e6f0';
+    ctx.font = '13px "Space Grotesk", sans-serif';
+    ctx.fillText(`Total distance traveled: ${distanceTraveled.toFixed(0)}`, sectionStartX + 6, cursorY); cursorY += 18;
+    ctx.fillText(`Time spent exploring: ${formatTime(timeExploring)}`, sectionStartX + 6, cursorY); cursorY += 18;
+    ctx.fillText(`Wisps encountered: ${wispsEncountered.size}`, sectionStartX + 6, cursorY); cursorY += 18;
+
+    ctx.fillStyle = '#8a8aa0';
+    ctx.font = '12px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press J to close', px + panelWidth / 2, py + panelHeight - 16);
+  }
+
   function drawWorld(time) {
     setWorldTransform();
     drawNebulaPatches();
@@ -1072,18 +1213,26 @@ body {
   function loop(timestamp) {
     const dt = lastTime ? timestamp - lastTime : 16;
     lastTime = timestamp;
-    updateCamera(dt);
+    const moved = updateCamera(dt);
+    distanceTraveled += moved;
+    timeExploring += dt;
     recordTrail(timestamp);
     updateParticles(dt);
     updateFragments(dt);
     updateWisps(dt);
+    updateWispEncounters();
     updateShootingStars(dt, timestamp);
     updateSecrets();
     updateCelebrationParticles(dt);
+    if (timestamp - lastStatsSave > 500) {
+      persistStats();
+      lastStatsSave = timestamp;
+    }
     drawBackground();
     drawWorld(timestamp);
     drawCelebrationParticles();
     drawMinimap();
+    drawJournalOverlay();
     updateHUD();
     requestAnimationFrame(loop);
   }
@@ -1185,6 +1334,10 @@ body {
       closeSeedModal();
       return;
     }
+    if (e.key === 'j' || e.key === 'J') {
+      journalOpen = !journalOpen;
+      return;
+    }
     keys[e.code] = true;
   });
   window.addEventListener('keyup', e => {
@@ -1198,6 +1351,7 @@ body {
 
   loadDiscoveredZones();
   loadDiscoveredSecrets();
+  loadStats();
   resize();
   initParticles();
   initFragments();
