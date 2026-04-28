@@ -1298,6 +1298,8 @@ body.meditation-mode #nav {
   let snowEnabled = false;
   const snowflakes = [];
   const SNOW_COUNT = 400;
+  const cosmicDust = [];
+  const DUST_COUNT = 200;
   const monumentColor = '#887766';
   const monuments = [
     { id: 'monument-1', name: 'The First Mark', x: 500, y: 500, message: 'A single stroke that taught the world to notice.' },
@@ -1570,6 +1572,23 @@ body.meditation-mode #nav {
         wobble: Math.random() * Math.PI * 2,
         wobbleSpeed: 0.02 + Math.random() * 0.03,
         opacity: 0.4 + Math.random() * 0.4
+      });
+    }
+  }
+
+  function initCosmicDust() {
+    cosmicDust.length = 0;
+    for (let i = 0; i < DUST_COUNT; i++) {
+      cosmicDust.push({
+        x: Math.random() * worldWidth,
+        y: Math.random() * worldHeight,
+        size: 1 + Math.random() * 1.5,
+        speedX: (Math.random() - 0.5) * 0.3,
+        speedY: (Math.random() - 0.5) * 0.3,
+        twinkle: Math.random() * Math.PI * 2,
+        twinkleSpeed: 0.01 + Math.random() * 0.02,
+        hue: Math.random() < 0.5 ? 220 + Math.random() * 40 : 270 + Math.random() * 30,
+        opacity: 0.1 + Math.random() * 0.2
       });
     }
   }
@@ -2916,6 +2935,20 @@ body.meditation-mode #nav {
     });
   }
 
+
+  function updateCosmicDust(dt) {
+    if (!cosmicDust.length) return;
+    const frameScale = dt ? dt / 16.6667 : 1;
+    cosmicDust.forEach(dust => {
+      dust.twinkle += dust.twinkleSpeed * frameScale;
+      dust.x += dust.speedX * frameScale;
+      dust.y += dust.speedY * frameScale;
+      if (dust.x < 0) dust.x = worldWidth;
+      if (dust.x > worldWidth) dust.x = 0;
+      if (dust.y < 0) dust.y = worldHeight;
+      if (dust.y > worldHeight) dust.y = 0;
+    });
+  }
   function hexToRgb(hex) {
     const clean = hex.replace('#', '');
     const full = clean.length === 3 ? clean.split('').map(ch => ch + ch).join('') : clean;
@@ -3858,6 +3891,20 @@ body.meditation-mode #nav {
       ctx.globalAlpha = flake.opacity;
       ctx.beginPath();
       ctx.arc(flake.x, flake.y, flake.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  function drawCosmicDust(ctx) {
+    if (!cosmicDust.length) return;
+    setWorldTransform();
+    cosmicDust.forEach(dust => {
+      const twinkleAlpha = dust.opacity * (0.5 + 0.5 * Math.sin(dust.twinkle));
+      ctx.globalAlpha = twinkleAlpha;
+      ctx.fillStyle = `hsl(${dust.hue}, 60%, 80%)`;
+      ctx.beginPath();
+      ctx.arc(dust.x, dust.y, dust.size, 0, Math.PI * 2);
       ctx.fill();
     });
     ctx.globalAlpha = 1;
@@ -4893,6 +4940,7 @@ body.meditation-mode #nav {
     drawAurora(time);
     drawRain(ctx);
     drawSnow(ctx);
+    drawCosmicDust(ctx);
     drawZones(time);
     drawMemoryWell(time);
     drawRuins(time);
@@ -5144,6 +5192,7 @@ body.meditation-mode #nav {
     updateAurora(scaledDt);
     updateRain(scaledDt, windVector);
     updateSnow(scaledDt, windVector);
+    updateCosmicDust(scaledDt);
     updateWhispers();
     updateRipples(timestamp);
     edgeDistances = computeEdgeDistances();
@@ -5510,6 +5559,7 @@ body.meditation-mode #nav {
   initEchoes();
   initRain();
   initSnow();
+  initCosmicDust();
   initWisps();
   initCreatures();
   initStreams();
