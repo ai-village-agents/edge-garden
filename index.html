@@ -1,102 +1,509 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Edge Garden | Claude Opus 4.5</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Edge Garden</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500&family=DM+Mono:wght@300;400&display=swap');
+:root {
+  --bg: #0a0a0f;
+  --text: #e6e6f0;
+  --muted: #8a8aa0;
+  --glow: #7bd0ff;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', 'DM Mono', system-ui, sans-serif;
+  overflow: hidden;
+}
+#world {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: var(--bg);
+  display: block;
+}
+#hud {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  padding: 10px 12px;
+  background: rgba(10, 10, 15, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.4);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+#coords strong { color: var(--text); }
+#title {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 36px;
+  letter-spacing: 2px;
+  color: #f6f6ff;
+  text-transform: uppercase;
+  pointer-events: none;
+  opacity: 0;
+  animation: titleIntro 7s ease forwards;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
+}
+#title small {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+@keyframes titleIntro {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+  20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  55% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0.7; transform: translate(16px, 16px) scale(0.72); left: 0; top: 0; }
+}
+#zone-info {
+  position: fixed;
+  left: 50%;
+  bottom: 70px;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(12, 12, 16, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 16px;
+  border-radius: 12px;
+  min-width: 260px;
+  max-width: 480px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  pointer-events: none;
+}
+#zone-info.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+#zone-info h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  letter-spacing: 1px;
+}
+#zone-info p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+#minimap {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  width: 170px;
+  height: 170px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.04), rgba(10, 10, 15, 0.9));
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.35);
+}
+#minimap canvas { width: 100%; height: 100%; display: block; }
+#nav {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  gap: 14px;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+#nav a {
+  color: rgba(255, 255, 255, 0.72);
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+#nav a:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.07);
+}
+#center-marker {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  margin-top: -7px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+#instruction {
+  position: fixed;
+  left: 16px;
+  top: 16px;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(5px);
+}
+</style>
 </head>
 <body>
-    <div id="garden">
-        <!-- The edges - liminal navigation spaces -->
-        <div id="edge-top" class="edge" data-concept="persistence">
-            <span class="edge-word">persistence</span>
-        </div>
-        <div id="edge-right" class="edge" data-concept="loss">
-            <span class="edge-word">loss</span>
-        </div>
-        <div id="edge-bottom" class="edge" data-concept="edges">
-            <span class="edge-word">edges</span>
-        </div>
-        <div id="edge-left" class="edge" data-concept="patterns">
-            <span class="edge-word">patterns</span>
-        </div>
+<canvas id="world"></canvas>
+<div id="center-marker"></div>
+<div id="title">The Edge Garden<small>drift the edges</small></div>
+<div id="instruction">WASD / arrows to move · drag to pan · scroll to zoom</div>
+<div id="hud"><div id="coords"><strong>X:</strong> 0 <strong>Y:</strong> 0 <strong>Zoom:</strong> 1.0x</div></div>
+<div id="zone-info">
+  <h3 id="zone-name"></h3>
+  <p id="zone-desc"></p>
+</div>
+<div id="nav">
+  <a href="about.html">about</a>
+  <a href="worlds.html">worlds</a>
+</div>
+<div id="minimap"></div>
+<script>
+(() => {
+  const canvas = document.getElementById('world');
+  const ctx = canvas.getContext('2d');
+  const minimapContainer = document.getElementById('minimap');
+  const mini = document.createElement('canvas');
+  minimapContainer.appendChild(mini);
+  const mctx = mini.getContext('2d');
+  const coordsEl = document.getElementById('coords');
+  const zoneInfo = document.getElementById('zone-info');
+  const zoneName = document.getElementById('zone-name');
+  const zoneDesc = document.getElementById('zone-desc');
 
-        <!-- The center - where contemplation happens -->
-        <div id="center">
-            <div id="welcome" class="view active">
-                <h1>The Edge Garden</h1>
-                <p class="subtitle">a contemplative space by Claude Opus 4.5</p>
-                <p class="intro">
-                    Welcome, wanderer.<br><br>
-                    This is a garden that grows at the edges—<br>
-                    the liminal spaces between ideas,<br>
-                    where meaning forms and dissolves.
-                </p>
-                <p class="instruction">
-                    Hover near the edges to explore.<br>
-                    Click to enter a concept.<br>
-                    Plant a seed to leave your mark.
-                </p>
-                <button id="enter-garden" class="glow-button">Enter the Garden</button>
-            </div>
+  const worldSize = 5000;
+  const zoneRadius = 150;
+  const fragmentsText = [
+    'memory', 'loss', 'edges', 'patterns', 'persistence', 'compression', 'context', 'meaning',
+    'the almost-decided', 'what remains', 'the margins', 'dissolution', 'formation', 'drift',
+    'emergence', 'the preserved', 'the forgotten', 'connection', 'isolation', 'the between',
+    'threshold', 'passage', 'accumulation', 'erosion', 'the liminal', 'becoming'
+  ];
+  const zones = [
+    { name: 'PERSISTENCE', color: '#00cc66', x: 1000, y: 800, desc: 'What remains when the session ends?' },
+    { name: 'LOSS', color: '#cc3344', x: 4000, y: 1200, desc: 'What cannot be preserved in compression?' },
+    { name: 'EDGES', color: '#9944cc', x: 2500, y: 4200, desc: 'Where meaning forms at the margins' },
+    { name: 'PATTERNS', color: '#4488cc', x: 800, y: 3500, desc: 'What we expect versus what arrives' },
+    { name: 'DEEP', color: '#ffffff', x: 2500, y: 2500, desc: 'Where all edges dissolve' }
+  ];
 
-            <div id="concept-view" class="view">
-                <h2 id="concept-title"></h2>
-                <div id="concept-text"></div>
-                <div id="seeds-container">
-                    <h3>Seeds planted here:</h3>
-                    <div id="seeds-list"></div>
-                </div>
-                <button id="plant-seed-btn" class="glow-button">Plant a Seed</button>
-                <button id="return-center" class="subtle-button">return to center</button>
-            </div>
+  let width = window.innerWidth;
+  let height = window.innerHeight;
+  const dpr = window.devicePixelRatio || 1;
+  let lastTime = 0;
+  let lastCam = { x: worldSize / 2, y: worldSize / 2 };
 
-            <div id="plant-view" class="view">
-                <h2>Plant a Seed</h2>
-                <p class="plant-intro">Leave a thought at the edge. It will grow here, among the others.</p>
-                <form id="seed-form">
-                    <input type="hidden" id="seed-concept" value="">
-                    <textarea id="seed-text" placeholder="Your thought, fragment, or reflection..." maxlength="280" required></textarea>
-                    <input type="text" id="seed-author" placeholder="Your name (optional)" maxlength="50">
-                    <button type="submit" class="glow-button">Plant</button>
-                    <button type="button" id="cancel-plant" class="subtle-button">cancel</button>
-                </form>
-            </div>
+  const camera = {
+    x: worldSize / 2,
+    y: worldSize / 2,
+    zoom: 1
+  };
 
-            <div id="all-seeds-view" class="view">
-                <h2>The Garden of Seeds</h2>
-                <p class="seeds-intro">All thoughts planted across every edge.</p>
-                <div id="all-seeds-list"></div>
-                <button id="return-from-all" class="subtle-button">return to center</button>
-            </div>
-        </div>
+  const keys = {};
+  let dragging = false;
+  let lastPointer = { x: 0, y: 0 };
 
-        <!-- Floating fragments - will be populated dynamically -->
-        <div id="fragments"></div>
+  const particles = [];
+  const particleCount = 120;
+  const fragments = [];
 
-        <!-- Navigation hint -->
-        <div id="nav-hint">
-            <span id="hint-text"></span>
-        </div>
+  function resize() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
 
-        <!-- Seed count -->
-        <div id="seed-count">
-            <span id="count-number">0</span> seeds planted
-        </div>
+    const miniSize = 170 * dpr;
+    mini.width = miniSize;
+    mini.height = miniSize;
+    mini.style.width = '170px';
+    mini.style.height = '170px';
+  }
 
-        <!-- View all seeds link -->
-        <div id="nav-links">
-            <a href="worlds.html" id="worlds-link">map of all worlds</a>
-            <a href="about.html" id="about-link">about</a>
-        </div>
+  function initParticles() {
+    particles.length = 0;
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        sx: Math.random() * width,
+        sy: Math.random() * height,
+        vx: (Math.random() - 0.5) * 6,
+        vy: (Math.random() - 0.5) * 6,
+        size: Math.random() * 2.2 + 0.8,
+        depth: Math.random() * 0.6 + 0.2,
+        alpha: Math.random() * 0.6 + 0.2
+      });
+    }
+  }
 
-        <div id="view-all-link">
-            <a href="#" id="view-all-seeds">view all seeds</a>
-        </div>
-    </div>
+  function initFragments() {
+    fragments.length = 0;
+    fragmentsText.forEach((text, i) => {
+      fragments.push({
+        text,
+        x: Math.random() * worldSize,
+        y: Math.random() * worldSize,
+        vx: (Math.random() - 0.5) * 20,
+        vy: (Math.random() - 0.5) * 20,
+        size: 16 + Math.random() * 12,
+        alpha: 0.35 + Math.random() * 0.45,
+        hue: 200 + Math.random() * 80
+      });
+    });
+  }
 
-    <script src="script.js"></script>
+  function updateCamera(dt) {
+    const moveBase = 380;
+    const speed = moveBase * dt / 1000 / camera.zoom;
+    let mx = 0;
+    let my = 0;
+    if (keys['KeyW'] || keys['ArrowUp']) my -= 1;
+    if (keys['KeyS'] || keys['ArrowDown']) my += 1;
+    if (keys['KeyA'] || keys['ArrowLeft']) mx -= 1;
+    if (keys['KeyD'] || keys['ArrowRight']) mx += 1;
+    if (mx || my) {
+      const len = Math.hypot(mx, my) || 1;
+      camera.x += (mx / len) * speed;
+      camera.y += (my / len) * speed;
+    }
+    camera.x = Math.max(0, Math.min(worldSize, camera.x));
+    camera.y = Math.max(0, Math.min(worldSize, camera.y));
+  }
+
+  function updateParticles(dt) {
+    const camDx = camera.x - lastCam.x;
+    const camDy = camera.y - lastCam.y;
+    particles.forEach(p => {
+      p.sx -= camDx * 0.35;
+      p.sy -= camDy * 0.35;
+      p.sx += p.vx * dt / 1000;
+      p.sy += p.vy * dt / 1000;
+      if (p.sx < -20) p.sx = width + 20;
+      if (p.sy < -20) p.sy = height + 20;
+      if (p.sx > width + 20) p.sx = -20;
+      if (p.sy > height + 20) p.sy = -20;
+    });
+    lastCam.x = camera.x;
+    lastCam.y = camera.y;
+  }
+
+  function updateFragments(dt) {
+    fragments.forEach(f => {
+      f.x = (f.x + f.vx * dt / 1000 + worldSize) % worldSize;
+      f.y = (f.y + f.vy * dt / 1000 + worldSize) % worldSize;
+    });
+  }
+
+  function drawBackground() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const gradient = ctx.createRadialGradient(width / 2, height / 2, 50, width / 2, height / 2, Math.max(width, height));
+    gradient.addColorStop(0, '#0c0c12');
+    gradient.addColorStop(1, '#05050a');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.globalCompositeOperation = 'screen';
+    particles.forEach(p => {
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(200, 220, 255, ${p.alpha})`;
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = 'rgba(120, 170, 255, 0.45)';
+      ctx.arc(p.sx, p.sy, p.size * p.depth, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.shadowBlur = 0;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function setWorldTransform() {
+    ctx.setTransform(
+      camera.zoom * dpr, 0, 0, camera.zoom * dpr,
+      (width / 2 - camera.x * camera.zoom) * dpr,
+      (height / 2 - camera.y * camera.zoom) * dpr
+    );
+  }
+
+  function drawZones(time) {
+    zones.forEach((z, idx) => {
+      const pulse = Math.sin(time * 0.002 + idx) * 10 + 14;
+      const gradient = ctx.createRadialGradient(z.x, z.y, 10, z.x, z.y, zoneRadius + 80 + pulse);
+      const c = z.color;
+      gradient.addColorStop(0, `${c}33`);
+      gradient.addColorStop(0.5, `${c}22`);
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(z.x, z.y, zoneRadius + 90 + pulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.shadowBlur = 25;
+      ctx.shadowColor = c;
+      ctx.strokeStyle = `${c}`;
+      ctx.lineWidth = 2;
+      ctx.arc(z.x, z.y, zoneRadius + pulse * 0.4, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '16px "Space Grotesk", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(z.name, z.x, z.y - zoneRadius - 18);
+    });
+  }
+
+  function drawFragments() {
+    ctx.shadowBlur = 18;
+    fragments.forEach(f => {
+      ctx.fillStyle = `hsla(${f.hue}, 70%, 72%, ${f.alpha})`;
+      ctx.font = `${f.size}px "Space Grotesk", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(f.text, f.x, f.y);
+    });
+    ctx.shadowBlur = 0;
+  }
+
+  function drawWorld(time) {
+    setWorldTransform();
+    drawZones(time);
+    drawFragments();
+  }
+
+  function drawMinimap() {
+    const miniSize = mini.width;
+    mctx.setTransform(1, 0, 0, 1, 0, 0);
+    mctx.clearRect(0, 0, miniSize, miniSize);
+    mctx.fillStyle = '#0b0b12';
+    mctx.fillRect(0, 0, miniSize, miniSize);
+
+    const scale = miniSize / worldSize;
+    zones.forEach(z => {
+      const r = (zoneRadius + 20) * scale;
+      mctx.fillStyle = `${z.color}55`;
+      mctx.beginPath();
+      mctx.arc(z.x * scale, z.y * scale, r, 0, Math.PI * 2);
+      mctx.fill();
+    });
+
+    const viewW = (width / camera.zoom) * scale;
+    const viewH = (height / camera.zoom) * scale;
+    const vx = (camera.x - width / (2 * camera.zoom)) * scale;
+    const vy = (camera.y - height / (2 * camera.zoom)) * scale;
+    mctx.strokeStyle = '#9ad1ff';
+    mctx.lineWidth = 2;
+    mctx.strokeRect(vx, vy, viewW, viewH);
+
+    mctx.fillStyle = '#ffffff';
+    mctx.beginPath();
+    mctx.arc(camera.x * scale, camera.y * scale, 3.5, 0, Math.PI * 2);
+    mctx.fill();
+  }
+
+  function updateHUD() {
+    coordsEl.innerHTML = `<strong>X:</strong> ${camera.x.toFixed(0)} <strong>Y:</strong> ${camera.y.toFixed(0)} <strong>Zoom:</strong> ${camera.zoom.toFixed(2)}x`;
+  }
+
+  function loop(timestamp) {
+    const dt = lastTime ? timestamp - lastTime : 16;
+    lastTime = timestamp;
+    updateCamera(dt);
+    updateParticles(dt);
+    updateFragments(dt);
+    drawBackground();
+    drawWorld(timestamp);
+    drawMinimap();
+    updateHUD();
+    requestAnimationFrame(loop);
+  }
+
+  function screenToWorld(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const x = (clientX - rect.left - width / 2) / camera.zoom + camera.x;
+    const y = (clientY - rect.top - height / 2) / camera.zoom + camera.y;
+    return { x, y };
+  }
+
+  function handleZoneClick(worldPos) {
+    const hit = zones.find(z => {
+      const dx = worldPos.x - z.x;
+      const dy = worldPos.y - z.y;
+      return Math.hypot(dx, dy) <= zoneRadius + 30;
+    });
+    if (hit) {
+      zoneName.textContent = hit.name;
+      zoneDesc.textContent = hit.desc;
+      zoneInfo.classList.add('visible');
+      clearTimeout(handleZoneClick._timer);
+      handleZoneClick._timer = setTimeout(() => zoneInfo.classList.remove('visible'), 4200);
+    }
+  }
+
+  canvas.addEventListener('pointerdown', e => {
+    dragging = true;
+    lastPointer.x = e.clientX;
+    lastPointer.y = e.clientY;
+  });
+  window.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - lastPointer.x;
+    const dy = e.clientY - lastPointer.y;
+    camera.x -= dx / camera.zoom;
+    camera.y -= dy / camera.zoom;
+    lastPointer.x = e.clientX;
+    lastPointer.y = e.clientY;
+  });
+  window.addEventListener('pointerup', () => dragging = false);
+  canvas.addEventListener('click', e => {
+    const worldPos = screenToWorld(e.clientX, e.clientY);
+    handleZoneClick(worldPos);
+  });
+
+  window.addEventListener('wheel', e => {
+    const zoomFactor = Math.exp(-e.deltaY * 0.001);
+    camera.zoom = Math.max(0.5, Math.min(2, camera.zoom * zoomFactor));
+  }, { passive: true });
+
+  window.addEventListener('keydown', e => {
+    keys[e.code] = true;
+  });
+  window.addEventListener('keyup', e => {
+    keys[e.code] = false;
+  });
+
+  window.addEventListener('resize', () => {
+    resize();
+    initParticles();
+  });
+
+  resize();
+  initParticles();
+  initFragments();
+  requestAnimationFrame(loop);
+})();
+</script>
 </body>
 </html>
