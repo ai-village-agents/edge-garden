@@ -795,9 +795,39 @@ body.meditation-mode #nav button:not(#meditation-toggle) {
 body.meditation-mode #nav {
   gap: 0;
 }
+.achievement-toast {
+  position: fixed;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 215, 0, 0.15);
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  padding: 15px 30px;
+  border-radius: 8px;
+  color: #ffd700;
+  font-size: 16px;
+  z-index: 1001;
+  opacity: 0;
+  transition: opacity 0.5s;
+  pointer-events: none;
+  text-align: center;
+}
+.achievement-toast.show {
+  opacity: 1;
+}
+.achievement-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+.achievement-desc {
+  font-size: 14px;
+  opacity: 0.8;
+}
 </style>
 </head>
 <body>
+<div id='achievementToast' class='achievement-toast'><div class='achievement-title'></div><div class='achievement-desc'></div></div>
 <canvas id="world"></canvas>
 <div id="meditation-vignette"></div>
 <div id="center-marker"></div>
@@ -909,6 +939,7 @@ body.meditation-mode #nav {
   const constellationToast = document.getElementById('constellation-toast');
   const memoryWellToast = document.getElementById('memory-well-toast');
   const edgeFragmentEl = document.getElementById('edge-fragment');
+  const achievementToast = document.getElementById('achievementToast');
   const meditationToggle = document.getElementById('meditation-toggle');
   const rainToggle = document.getElementById('rain-toggle');
   const snowToggle = document.getElementById('snow-toggle');
@@ -1047,6 +1078,7 @@ body.meditation-mode #nav {
   const constellationStarsStorageKey = 'edge-garden-stars';
   const thoughtFragmentsStorageKey = 'edge-garden-fragments';
   const memoryWellStorageKey = 'edge-garden-memory-well';
+  const achievementsStorageKey = 'edge-garden-achievements';
   const fragmentsText = [
     'memory', 'loss', 'edges', 'patterns', 'persistence', 'compression', 'context', 'meaning',
     'the almost-decided', 'what remains', 'the margins', 'dissolution', 'formation', 'drift',
@@ -1393,6 +1425,7 @@ body.meditation-mode #nav {
   let discoveredIslands = [];
   let discoveredSecrets = [];
   let discoveredCorners = [];
+  let achievementsShown = {};
   let hiddenZoneUnlocked = false;
   let celebrationTriggered = false;
   const celebrationParticles = [];
@@ -1821,6 +1854,9 @@ body.meditation-mode #nav {
     if (!discoveredZones.includes(name)) {
       discoveredZones.push(name);
       persistDiscoveredZones();
+      if (discoveredZones.length === 1) {
+        unlockAchievement('first-discovery', 'First Discovery', 'You discovered your first zone.');
+      }
       if (discoveredZones.length >= zones.length) triggerCelebration();
     } else if (!celebrationTriggered && discoveredZones.length >= zones.length) {
       triggerCelebration();
@@ -1855,6 +1891,9 @@ body.meditation-mode #nav {
     monument.discovered = true;
     persistDiscoveredMonuments();
     updateHUD();
+    if (discoveredMonuments.length === 1) {
+      unlockAchievement('monument-explorer', 'Monument Explorer', 'You found your first monument.');
+    }
     return true;
   }
 
@@ -1972,15 +2011,53 @@ body.meditation-mode #nav {
       discoveredCorners.push(id);
       persistDiscoveredCorners();
       updateHUD();
+      if (discoveredCorners.length === cornerFragments.length) {
+        unlockAchievement('edge-walker', 'Edge Walker', 'You reached every corner of the garden.');
+      }
       return true;
     }
     return false;
+  }
+
+  function loadAchievements() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(achievementsStorageKey) || '{}');
+      if (stored && typeof stored === 'object') return stored;
+    } catch (e) {
+      // ignore
+    }
+    return {};
+  }
+
+  function persistAchievements() {
+    localStorage.setItem(achievementsStorageKey, JSON.stringify(achievementsShown));
+  }
+
+  function showAchievement(title, description) {
+    if (!achievementToast) return;
+    const titleEl = achievementToast.querySelector('.achievement-title');
+    const descEl = achievementToast.querySelector('.achievement-desc');
+    if (titleEl) titleEl.textContent = title || '';
+    if (descEl) descEl.textContent = description || '';
+    achievementToast.classList.add('show');
+    clearTimeout(showAchievement._timer);
+    showAchievement._timer = setTimeout(() => achievementToast.classList.remove('show'), 4000);
+  }
+
+  function unlockAchievement(key, title, description) {
+    if (achievementsShown[key]) return;
+    achievementsShown[key] = true;
+    persistAchievements();
+    showAchievement(title, description);
   }
 
   function markSecretDiscovered(id) {
     if (!discoveredSecrets.includes(id)) {
       discoveredSecrets.push(id);
       persistDiscoveredSecrets();
+      if (discoveredSecrets.length === 1) {
+        unlockAchievement('secret-seeker', 'Secret Seeker', 'You uncovered your first hidden secret.');
+      }
     }
   }
 
@@ -2018,6 +2095,12 @@ body.meditation-mode #nav {
   function persistConstellationStars() {
     const found = constellationStars.filter(s => s.discovered).map(s => s.id);
     localStorage.setItem(constellationStarsStorageKey, JSON.stringify(found));
+  }
+
+  function totalStarsDiscovered() {
+    const constellationFound = constellationStars.filter(s => s.discovered).length;
+    const memoryFound = memoryStars.filter(s => s.discovered).length;
+    return constellationFound + memoryFound;
   }
 
   function loadMemoryWellDiscovery() {
@@ -2063,6 +2146,9 @@ body.meditation-mode #nav {
     if (!star || star.discovered) return false;
     star.discovered = true;
     persistMemoryStars();
+    if (totalStarsDiscovered() === 1) {
+      unlockAchievement('stargazer', 'Stargazer', 'You charted your first star.');
+    }
     showMemoryOverlay(star.message);
     return true;
   }
@@ -2827,6 +2913,10 @@ body.meditation-mode #nav {
     if (!hit.discovered) {
       hit.discovered = true;
       persistConstellationStars();
+      const discoveredStars = totalStarsDiscovered();
+      if (discoveredStars === 1) {
+        unlockAchievement('stargazer', 'Stargazer', 'You charted your first star.');
+      }
       showConstellationToast(hit.name);
       updateHUD();
     } else {
@@ -5535,6 +5625,7 @@ body.meditation-mode #nav {
     initParticles();
   });
 
+  achievementsShown = loadAchievements();
   loadDiscoveredZones();
   loadDiscoveredSecrets();
   loadDiscoveredCorners();
