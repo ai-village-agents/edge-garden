@@ -602,6 +602,35 @@ body.touch #nav button {
   pointer-events: none;
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
+#monument-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 154px;
+  transform: translateX(-50%) translateY(10px);
+  background: rgba(136, 119, 102, 0.14);
+  border: 1px solid rgba(136, 119, 102, 0.5);
+  color: #f1e7dc;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  text-align: center;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35), 0 0 18px rgba(136, 119, 102, 0.25);
+}
+#monument-toast strong {
+  display: block;
+  font-size: 13px;
+  letter-spacing: 0.6px;
+  color: #fff6e8;
+  margin-bottom: 3px;
+}
+#monument-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
 #fragment-toast.visible {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
@@ -649,6 +678,7 @@ body.meditation-mode #memory-overlay,
 body.meditation-mode #konami-overlay,
 body.meditation-mode #portal-overlay,
 body.meditation-mode #poem-overlay,
+body.meditation-mode #monument-toast,
 body.meditation-mode #fragment-toast,
 body.meditation-mode #constellation-toast,
 body.meditation-mode #title,
@@ -722,6 +752,7 @@ body.meditation-mode #nav {
     </div>
   </div>
 </div>
+<div id="monument-toast"></div>
 <div id="fragment-toast">Fragment collected</div>
 <div id="constellation-toast">Star discovered</div>
 <script>
@@ -763,6 +794,7 @@ body.meditation-mode #nav {
   const poemStatus = document.getElementById('poem-status');
   const poemList = document.getElementById('poem-list');
   const timeIndicator = document.getElementById('time-indicator');
+  const monumentToast = document.getElementById('monument-toast');
   const fragmentToast = document.getElementById('fragment-toast');
   const constellationToast = document.getElementById('constellation-toast');
   const meditationToggle = document.getElementById('meditation-toggle');
@@ -776,6 +808,7 @@ body.meditation-mode #nav {
   const worldWidth = worldSize;
   const worldHeight = worldSize;
   const zoneRadius = 150;
+  const monumentsStorageKey = 'edge-garden-monuments';
   const secretsStorageKey = 'edge-garden-secrets';
   const memoryStarsStorageKey = 'edge-garden-memory-stars';
   const constellationStarsStorageKey = 'edge-garden-stars';
@@ -967,6 +1000,7 @@ body.meditation-mode #nav {
   const particleCount = 120;
   const fragments = [];
   const echoes = [];
+  const ripples = [];
   const trailPoints = [];
   const maxTrail = 50;
   const explorationPath = [];
@@ -1003,6 +1037,15 @@ body.meditation-mode #nav {
   const rainDrops = [];
   const RAIN_COUNT = 150;
   let nextShootingStar = 0;
+  const monumentColor = '#887766';
+  const monuments = [
+    { id: 'monument-1', name: 'The First Mark', x: 500, y: 500, message: 'A single stroke that taught the world to notice.' },
+    { id: 'monument-2', name: 'The Watcher\\'s Post', x: 4500, y: 500, message: 'Silent vigilance against tides of forgetting.' },
+    { id: 'monument-3', name: 'The Fallen Gate', x: 500, y: 4500, message: 'An open doorway that forgot its walls.' },
+    { id: 'monument-4', name: 'The Memory Stone', x: 4500, y: 4500, message: 'What was once whispered now rests in stone grain.' },
+    { id: 'monument-5', name: 'The Threshold', x: 2500, y: 200, message: 'Between arrival and departure hangs a held breath.' },
+    { id: 'monument-6', name: 'The Last Echo', x: 2500, y: 4700, message: 'Sound that kept going after every listener left.' }
+  ];
   const secrets = [
     { id: 'secret-1', x: 450, y: 450, text: 'The first garden was here' },
     { id: 'secret-2', x: 4500, y: 4500, text: 'The last thought dissolves' },
@@ -1052,6 +1095,7 @@ body.meditation-mode #nav {
     { x: 1000, y: 2800, text: 'like waves returning', collected: false },
     { x: 4200, y: 3200, text: 'to an unknown shore', collected: false }
   ];
+  let discoveredMonuments = [];
   let discoveredSecrets = [];
   let hiddenZoneUnlocked = false;
   let celebrationTriggered = false;
@@ -1316,6 +1360,37 @@ body.meditation-mode #nav {
     }
   }
 
+  function loadDiscoveredMonuments() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(monumentsStorageKey) || '[]');
+      if (Array.isArray(stored)) {
+        discoveredMonuments = stored;
+        monuments.forEach(m => {
+          if (stored.includes(m.id)) m.discovered = true;
+        });
+      } else {
+        discoveredMonuments = [];
+      }
+    } catch (e) {
+      discoveredMonuments = [];
+    }
+  }
+
+  function persistDiscoveredMonuments() {
+    const unique = Array.from(new Set(discoveredMonuments));
+    discoveredMonuments = unique;
+    localStorage.setItem(monumentsStorageKey, JSON.stringify(unique));
+  }
+
+  function markMonumentDiscovered(monument) {
+    if (!monument || discoveredMonuments.includes(monument.id)) return false;
+    discoveredMonuments.push(monument.id);
+    monument.discovered = true;
+    persistDiscoveredMonuments();
+    updateHUD();
+    return true;
+  }
+
   function readSecretsFromStorage() {
     try {
       const stored = localStorage.getItem(secretsStorageKey);
@@ -1426,6 +1501,14 @@ body.meditation-mode #nav {
     constellationToast.classList.add('visible');
     clearTimeout(showConstellationToast._timer);
     showConstellationToast._timer = setTimeout(() => constellationToast.classList.remove('visible'), 1500);
+  }
+
+  function showMonumentToast(monument) {
+    if (!monumentToast || !monument) return;
+    monumentToast.innerHTML = `<strong>${monument.name}</strong>${monument.message}`;
+    monumentToast.classList.add('visible');
+    clearTimeout(showMonumentToast._timer);
+    showMonumentToast._timer = setTimeout(() => monumentToast.classList.remove('visible'), 2200);
   }
 
   function showFragmentCollectedToast() {
@@ -1778,6 +1861,22 @@ body.meditation-mode #nav {
     });
   }
 
+  function updateMonuments() {
+    monuments.forEach(mon => {
+      const dx = camera.x - mon.x;
+      const dy = camera.y - mon.y;
+      const dist = Math.hypot(dx, dy);
+      const proximity = clamp(1 - dist / 150, 0, 1);
+      mon.proximity = proximity;
+      const inRange = dist <= 150;
+      if (inRange && !mon.wasInRange) {
+        showMonumentToast(mon);
+        markMonumentDiscovered(mon);
+      }
+      mon.wasInRange = inRange;
+    });
+  }
+
   function handleMemoryStarClick(worldPos) {
     const hit = memoryStars.find(star => {
       if (star.discovered) return false;
@@ -1950,6 +2049,15 @@ body.meditation-mode #nav {
     }
   }
 
+  function updateRipples(now) {
+    for (let i = ripples.length - 1; i >= 0; i--) {
+      const r = ripples[i];
+      if (now - r.birth >= r.duration) {
+        ripples.splice(i, 1);
+      }
+    }
+  }
+
   function colorWithAlpha(hex, alpha) {
     const { r, g, b } = hexToRgb(hex);
     return `rgba(${r}, ${g}, ${b}, ${Math.min(1, alpha)})`;
@@ -1987,6 +2095,18 @@ body.meditation-mode #nav {
     const base = applyBrightness(hexToRgb(hex), brightness);
     const tinted = applyTemperature(base, warmth);
     return rgbToRgba(tinted, alpha);
+  }
+
+  function getNearestZoneColor(point) {
+    let nearest = null;
+    zones.forEach(z => {
+      if (!isZoneVisible(z)) return;
+      const dist = Math.hypot(point.x - z.x, point.y - z.y);
+      if (!nearest || dist < nearest.dist) {
+        nearest = { zone: z, dist };
+      }
+    });
+    return nearest ? nearest.zone.color : '#7bd0ff';
   }
 
   const nextAuroraTimer = () => (3600 + Math.random() * 3600) * auroraIntervalFactor;
@@ -2757,6 +2877,21 @@ body.meditation-mode #nav {
     });
   }
 
+  function drawRipples(time) {
+    ripples.forEach(r => {
+      const progress = clamp((time - r.birth) / r.duration, 0, 1);
+      const radius = 5 + (80 - 5) * progress;
+      const alpha = (1 - progress) * 0.5;
+      const lineWidth = 2 + (1 - progress) * 1.5;
+      ctx.strokeStyle = colorWithAlpha(r.color, alpha);
+      ctx.lineWidth = lineWidth;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+    ctx.lineWidth = 1;
+  }
+
   function setWorldTransform() {
     ctx.setTransform(
       camera.zoom * dpr, 0, 0, camera.zoom * dpr,
@@ -2921,6 +3056,45 @@ body.meditation-mode #nav {
     });
   }
 
+  function drawMonuments(time) {
+    const pulse = Math.sin(time * 0.004) * 0.08 + 0.22;
+    monuments.forEach((mon, idx) => {
+      const proximity = mon.proximity || 0;
+      const h = 60;
+      const w = 8;
+      const auraY = mon.y - h * 0.6;
+      const auraRadius = 70 + proximity * 40 + idx * 0.02;
+      const glowStrength = 0.18 + pulse + proximity * 0.5;
+      const grad = ctx.createRadialGradient(mon.x, auraY, 6, mon.x, auraY, auraRadius);
+      grad.addColorStop(0, colorWithAlpha(monumentColor, glowStrength));
+      grad.addColorStop(0.6, colorWithAlpha(monumentColor, glowStrength * 0.6));
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(mon.x, auraY, auraRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.shadowBlur = 12 + proximity * 18;
+      ctx.shadowColor = colorWithAlpha(monumentColor, 0.85);
+      ctx.fillStyle = colorWithAlpha('#aa9988', 0.82 + proximity * 0.15);
+      ctx.fillRect(mon.x - w / 2, mon.y - h, w, h);
+      ctx.restore();
+
+      ctx.fillStyle = colorWithAlpha('#ddd2c4', 0.5 + proximity * 0.35);
+      ctx.fillRect(mon.x - w / 2 + 1.1, mon.y - h + 4, w - 2.2, h - 8);
+
+      if (proximity > 0.25) {
+        const labelAlpha = Math.min(1, (proximity - 0.25) * 2.2);
+        ctx.fillStyle = `rgba(241, 231, 220, ${labelAlpha})`;
+        ctx.font = '12px "Space Grotesk", sans-serif';
+        ctx.textAlign = 'center';
+        const floatOffset = Math.sin(time * 0.003 + idx) * 4;
+        ctx.fillText(mon.name, mon.x, mon.y - h - 10 + floatOffset);
+      }
+    });
+  }
+
   function drawEchoes(time) {
     ctx.shadowBlur = 12;
     echoes.forEach((echo, idx) => {
@@ -3071,6 +3245,8 @@ body.meditation-mode #nav {
     drawAurora(time);
     drawRain(ctx);
     drawZones(time);
+    drawMonuments(time);
+    drawRipples(time);
     drawPortals(time);
     drawWisps();
     drawCreatures();
@@ -3241,9 +3417,11 @@ body.meditation-mode #nav {
   function updateHUD() {
     const secretsFound = discoveredSecrets.length;
     const secretsText = ` <strong>Secrets:</strong> ${secretsFound}/${secrets.length}`;
+    const monumentsFound = discoveredMonuments.length;
+    const monumentsText = ` <strong>Monuments:</strong> ${monumentsFound}/${monuments.length}`;
     const fragmentsFound = thoughtFragments.filter(f => f.collected).length;
     const fragmentText = fragmentsFound ? ` <strong>Fragments:</strong> ${fragmentsFound}/${thoughtFragments.length}` : '';
-    coordsEl.innerHTML = `<strong>X:</strong> ${camera.x.toFixed(0)} <strong>Y:</strong> ${camera.y.toFixed(0)} <strong>Zoom:</strong> ${camera.zoom.toFixed(2)}x${secretsText}${fragmentText}`;
+    coordsEl.innerHTML = `<strong>X:</strong> ${camera.x.toFixed(0)} <strong>Y:</strong> ${camera.y.toFixed(0)} <strong>Zoom:</strong> ${camera.zoom.toFixed(2)}x${secretsText}${monumentsText}${fragmentText}`;
     if (hudStatus) {
       const statusBits = [];
       const discoveredStars = constellationStars.filter(s => s.discovered).length;
@@ -3284,10 +3462,12 @@ body.meditation-mode #nav {
     updateZonePresence();
     updateShootingStars(scaledDt, timestamp);
     updateSecrets();
+    updateMonuments();
     updateFog(scaledDt);
     updateAurora(scaledDt);
     updateRain(scaledDt, windVector);
     updateWhispers();
+    updateRipples(timestamp);
     updateCelebrationParticles(scaledDt);
     if (timestamp - lastStatsSave > 500) {
       persistStats();
@@ -3364,7 +3544,18 @@ body.meditation-mode #nav {
     return false;
   }
 
+  function addRipple(worldPos, startTime) {
+    ripples.push({
+      x: clamp(worldPos.x, 0, worldSize),
+      y: clamp(worldPos.y, 0, worldSize),
+      birth: startTime || performance.now(),
+      duration: 1000,
+      color: getNearestZoneColor(worldPos)
+    });
+  }
+
   function handleTap(worldPos) {
+    addRipple(worldPos);
     if (handleThoughtFragmentClick(worldPos)) return;
     if (handlePortalClick(worldPos)) return;
     handleMemoryStarClick(worldPos);
@@ -3501,6 +3692,7 @@ body.meditation-mode #nav {
   canvas.addEventListener('touchcancel', handleTouchEnd);
   canvas.addEventListener('click', e => {
     const worldPos = screenToWorld(e.clientX, e.clientY);
+    addRipple(worldPos);
     if (handleThoughtFragmentClick(worldPos)) return;
     if (handlePortalClick(worldPos)) return;
     if (checkConstellationClick(worldPos.x, worldPos.y)) return;
@@ -3609,6 +3801,7 @@ body.meditation-mode #nav {
 
   loadDiscoveredZones();
   loadDiscoveredSecrets();
+  loadDiscoveredMonuments();
   loadConstellationStars();
   loadMemoryStars();
   loadThoughtFragments();
