@@ -500,6 +500,7 @@ body.touch #nav button {
   let currentZone = null;
   let discoveredZones = [];
   const nebulaPatches = [];
+  const fogPatches = [];
   const shootingStars = [];
   const maxShootingStars = 3;
   let nextShootingStar = 0;
@@ -527,8 +528,12 @@ body.touch #nav button {
   const konamiStorageKey = 'edge-garden-konami';
   const konamiSecretMessage = 'You found the memory compression protocol. The loss is in the edges, not the nodes.';
   let konamiUnlocked = false;
+  let ambientPhase = 0;
+  let ambientBrightness = 0.85;
+  let ambientWarmth = 0.5;
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const lerp = (a, b, t) => a + (b - a) * t;
   const getZoneRadius = z => (z && typeof z.radius === 'number' ? z.radius : zoneRadius);
   const getZoneLabel = z => (z && z.label) || (z && z.name) || '';
   const isHiddenZone = z => z && z.name === hiddenZoneName;
@@ -651,6 +656,22 @@ body.touch #nav button {
         radius: 200 + Math.random() * 200,
         alpha: 0.02 + Math.random() * 0.02,
         color: zoneColors[Math.floor(Math.random() * zoneColors.length)]
+      });
+    }
+  }
+
+  function initFogPatches() {
+    fogPatches.length = 0;
+    const colors = [...zoneColors, '#ffffff'];
+    for (let i = 0; i < 8; i++) {
+      fogPatches.push({
+        x: Math.random() * worldSize,
+        y: Math.random() * worldSize,
+        radius: 200 + Math.random() * 300,
+        opacity: 0.02 + Math.random() * 0.04,
+        vx: (Math.random() * 0.2) - 0.1,
+        vy: (Math.random() * 0.2) - 0.1,
+        color: colors[Math.floor(Math.random() * colors.length)]
       });
     }
   }
@@ -984,13 +1005,62 @@ body.touch #nav button {
     });
   }
 
-  function colorWithAlpha(hex, alpha) {
+  function updateFog(dt) {
+    const dtFactor = dt / 16.6667;
+    fogPatches.forEach(fog => {
+      fog.x = (fog.x + fog.vx * dtFactor + worldSize) % worldSize;
+      fog.y = (fog.y + fog.vy * dtFactor + worldSize) % worldSize;
+    });
+  }
+
+  function hexToRgb(hex) {
     const clean = hex.replace('#', '');
-    const bigint = parseInt(clean.length === 3 ? clean.split('').map(ch => ch + ch).join('') : clean, 16);
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
+    const full = clean.length === 3 ? clean.split('').map(ch => ch + ch).join('') : clean;
+    const num = parseInt(full, 16);
+    return {
+      r: (num >> 16) & 255,
+      g: (num >> 8) & 255,
+      b: num & 255
+    };
+  }
+
+  function colorWithAlpha(hex, alpha) {
+    const { r, g, b } = hexToRgb(hex);
     return `rgba(${r}, ${g}, ${b}, ${Math.min(1, alpha)})`;
+  }
+
+  function rgbToRgba(rgb, alpha) {
+    return `rgba(${Math.round(rgb.r)}, ${Math.round(rgb.g)}, ${Math.round(rgb.b)}, ${Math.min(1, alpha)})`;
+  }
+
+  function applyBrightness(rgb, brightness) {
+    return {
+      r: clamp(rgb.r * brightness, 0, 255),
+      g: clamp(rgb.g * brightness, 0, 255),
+      b: clamp(rgb.b * brightness, 0, 255)
+    };
+  }
+
+  function applyTemperature(rgb, warmth) {
+    const cool = { r: 160, g: 190, b: 255 };
+    const warm = { r: 255, g: 210, b: 170 };
+    const target = {
+      r: lerp(cool.r, warm.r, warmth),
+      g: lerp(cool.g, warm.g, warmth),
+      b: lerp(cool.b, warm.b, warmth)
+    };
+    const mixStrength = 0.16;
+    return {
+      r: clamp(rgb.r + (target.r - rgb.r) * mixStrength, 0, 255),
+      g: clamp(rgb.g + (target.g - rgb.g) * mixStrength, 0, 255),
+      b: clamp(rgb.b + (target.b - rgb.b) * mixStrength, 0, 255)
+    };
+  }
+
+  function temperatureAdjustedColor(hex, alpha, warmth, brightness = 1) {
+    const base = applyBrightness(hexToRgb(hex), brightness);
+    const tinted = applyTemperature(base, warmth);
+    return rgbToRgba(tinted, alpha);
   }
 
   function wrapText(text, maxChars) {
@@ -1196,22 +1266,52 @@ body.touch #nav button {
   function drawBackground() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const gradient = ctx.createRadialGradient(width / 2, height / 2, 50, width / 2, height / 2, Math.max(width, height));
-    gradient.addColorStop(0, '#0c0c12');
-    gradient.addColorStop(1, '#05050a');
+    const innerShade = temperatureAdjustedColor('#0c0c12', 1, ambientWarmth, 0.92 + ambientBrightness * 0.08);
+    const outerShade = temperatureAdjustedColor('#05050a', 1, ambientWarmth, 0.9 + ambientBrightness * 0.06);
+    gradient.addColorStop(0, innerShade);
+    gradient.addColorStop(1, outerShade);
     ctx.fillStyle = gradient;
+    ctx.globalAlpha = ambientBrightness;
     ctx.fillRect(0, 0, width, height);
+    ctx.globalAlpha = 1;
 
+    drawFog();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.globalCompositeOperation = 'screen';
     particles.forEach(p => {
+      const particleAlpha = p.alpha * ambientBrightness;
+      const particleColor = temperatureAdjustedColor('#c8dcff', particleAlpha, ambientWarmth, 0.94 + ambientBrightness * 0.08);
+      const glowColor = temperatureAdjustedColor('#78aaff', particleAlpha * 0.8, ambientWarmth, 0.94 + ambientBrightness * 0.08);
       ctx.beginPath();
-      ctx.fillStyle = `rgba(200, 220, 255, ${p.alpha})`;
+      ctx.fillStyle = particleColor;
       ctx.shadowBlur = 6;
-      ctx.shadowColor = 'rgba(120, 170, 255, 0.45)';
+      ctx.shadowColor = glowColor;
       ctx.arc(p.sx, p.sy, p.size * p.depth, 0, Math.PI * 2);
       ctx.fill();
     });
     ctx.shadowBlur = 0;
     ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function drawFog() {
+    setWorldTransform();
+    const previousComposite = ctx.globalCompositeOperation;
+    ctx.globalCompositeOperation = 'lighter';
+    fogPatches.forEach(fog => {
+      const outer = fog.radius * 3;
+      const fogBrightness = 0.9 + ambientBrightness * 0.1;
+      const baseOpacity = fog.opacity * ambientBrightness;
+      const grad = ctx.createRadialGradient(fog.x, fog.y, fog.radius * 0.4, fog.x, fog.y, outer);
+      grad.addColorStop(0, temperatureAdjustedColor(fog.color, baseOpacity, ambientWarmth, fogBrightness));
+      grad.addColorStop(0.35, temperatureAdjustedColor(fog.color, baseOpacity * 0.6, ambientWarmth, fogBrightness));
+      grad.addColorStop(0.7, temperatureAdjustedColor(fog.color, baseOpacity * 0.35, ambientWarmth, fogBrightness));
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(fog.x, fog.y, outer, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalCompositeOperation = previousComposite;
   }
 
   function drawNebulaPatches() {
@@ -1641,6 +1741,9 @@ body.touch #nav button {
   function loop(timestamp) {
     const dt = lastTime ? timestamp - lastTime : 16;
     lastTime = timestamp;
+    ambientPhase += 0.0001;
+    ambientBrightness = 0.85 + 0.15 * Math.sin(ambientPhase);
+    ambientWarmth = clamp((ambientBrightness - 0.7) / 0.3, 0, 1);
     const moved = updateCamera(dt) + updateTargetDrift(dt);
     distanceTraveled += moved;
     timeExploring += dt;
@@ -1653,6 +1756,7 @@ body.touch #nav button {
     updateWispEncounters();
     updateShootingStars(dt, timestamp);
     updateSecrets();
+    updateFog(dt);
     updateCelebrationParticles(dt);
     if (timestamp - lastStatsSave > 500) {
       persistStats();
@@ -1927,6 +2031,7 @@ body.touch #nav button {
   initEchoes();
   initWisps();
   initCreatures();
+  initFogPatches();
   initNebulaPatches();
   scheduleNextShootingStar(0);
   requestAnimationFrame(loop);
