@@ -499,6 +499,7 @@ body.touch #nav button {
   let height = window.innerHeight;
   const dpr = window.devicePixelRatio || 1;
   let lastTime = 0;
+  let frameCounter = 0;
   let lastCam = { x: worldSize / 2, y: worldSize / 2 };
 
   const camera = {
@@ -526,6 +527,8 @@ body.touch #nav button {
   const echoes = [];
   const trailPoints = [];
   const maxTrail = 50;
+  const explorationPath = [];
+  const maxExplorationPath = 500;
   const wisps = [];
   const creatures = [];
   const creatureCount = 25;
@@ -592,6 +595,12 @@ body.touch #nav button {
   let ambientPhase = 0;
   let ambientBrightness = 0.85;
   let ambientWarmth = 0.5;
+  let auroraActive = false;
+  let auroraOpacity = 0;
+  let auroraPhase = 0;
+  let auroraTimer = 0;
+  let auroraDuration = 0;
+  const auroraColors = ['#00ff88', '#0088ff', '#8800ff', '#ff0088', '#00ffcc'];
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -878,6 +887,19 @@ body.touch #nav button {
       trailPoints.push({ x: camera.x, y: camera.y, birth: time });
       if (trailPoints.length > maxTrail) trailPoints.shift();
       lastTrailAdd = time;
+    }
+  }
+
+  function recordExplorationPath() {
+    if (frameCounter % 30 !== 0) return;
+    const currentPos = {
+      x: clamp(camera.x + canvas.width / 2, 0, worldSize),
+      y: clamp(camera.y + canvas.height / 2, 0, worldSize)
+    };
+    const last = explorationPath[explorationPath.length - 1];
+    if (!last || Math.hypot(currentPos.x - last.x, currentPos.y - last.y) > 50) {
+      explorationPath.push(currentPos);
+      if (explorationPath.length > maxExplorationPath) explorationPath.shift();
     }
   }
 
@@ -1239,6 +1261,36 @@ body.touch #nav button {
     const base = applyBrightness(hexToRgb(hex), brightness);
     const tinted = applyTemperature(base, warmth);
     return rgbToRgba(tinted, alpha);
+  }
+
+  const nextAuroraTimer = () => 3600 + Math.random() * 3600;
+  const nextAuroraDuration = () => 300 + Math.random() * 300;
+
+  function updateAurora(dt) {
+    const frames = dt / 16.6667;
+    if (!auroraActive) {
+      auroraTimer -= frames;
+      if (auroraTimer <= 0) {
+        auroraActive = true;
+        auroraDuration = nextAuroraDuration();
+      }
+    }
+    if (auroraActive) {
+      auroraPhase += 0.006 * frames;
+      auroraOpacity = Math.min(0.3, auroraOpacity + 0.0035 * frames);
+      auroraDuration -= frames;
+      if (auroraDuration <= 0) {
+        auroraOpacity = Math.max(0, auroraOpacity - 0.0045 * frames);
+        if (auroraOpacity <= 0.01) {
+          auroraActive = false;
+          auroraOpacity = 0;
+          auroraTimer = nextAuroraTimer();
+          auroraDuration = 0;
+        }
+      }
+    } else if (auroraOpacity > 0) {
+      auroraOpacity = Math.max(0, auroraOpacity - 0.003 * frames);
+    }
   }
 
   function wrapText(text, maxChars) {
@@ -1609,6 +1661,51 @@ body.touch #nav button {
     });
     ctx.shadowBlur = 0;
     ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function drawAurora(time) {
+    if (auroraOpacity <= 0) return;
+    setWorldTransform();
+    const prevComposite = ctx.globalCompositeOperation;
+    ctx.globalCompositeOperation = 'screen';
+    const viewW = width / camera.zoom;
+    const viewH = height / camera.zoom;
+    const left = camera.x - viewW / 2;
+    const top = camera.y - viewH / 2;
+    const curtainCount = Math.min(7, 5 + Math.floor((Math.sin(auroraPhase * 0.2) + 1) * 1.2));
+    const shimmer = Math.sin((auroraPhase + time * 0.001) * 0.15) * 0.05 + 0.9;
+    for (let i = 0; i < curtainCount; i++) {
+      const t = curtainCount > 1 ? i / (curtainCount - 1) : 0.5;
+      const baseX = left + t * viewW;
+      const wave = Math.sin(auroraPhase * 0.6 + i * 0.8) * viewW * 0.05 + Math.sin(auroraPhase * 0.25 + i) * viewW * 0.025;
+      const wobbleTop = Math.sin(auroraPhase * 0.35 + i * 1.1) * viewW * 0.02;
+      const wobbleBottom = Math.sin(auroraPhase * 0.42 + i * 1.6) * viewW * 0.025;
+      const curtainWidth = viewW * (0.08 + 0.02 * Math.sin(auroraPhase * 0.3 + i));
+      const yTop = top + viewH * 0.02;
+      const yBottom = top + viewH * 0.38 + Math.sin(auroraPhase * 0.15 + i) * viewH * 0.02;
+      const xTop = baseX + wave + wobbleTop;
+      const xBottom = baseX + wave + wobbleBottom;
+      const colorIndex = Math.floor((auroraPhase * 0.25 + i) % auroraColors.length);
+      const colorA = auroraColors[colorIndex];
+      const colorB = auroraColors[(colorIndex + 1) % auroraColors.length];
+      const grad = ctx.createLinearGradient(xTop, yTop, xBottom, yBottom);
+      const baseAlpha = auroraOpacity * (0.75 + shimmer * 0.15);
+      grad.addColorStop(0, colorWithAlpha(colorA, baseAlpha));
+      grad.addColorStop(0.45, colorWithAlpha(colorB, baseAlpha * 0.65));
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.shadowBlur = 40;
+      ctx.shadowColor = colorWithAlpha(colorB, baseAlpha * 0.8);
+      ctx.beginPath();
+      ctx.moveTo(xTop - curtainWidth * 0.5, yTop);
+      ctx.lineTo(xTop + curtainWidth * 0.5, yTop);
+      ctx.lineTo(xBottom + curtainWidth * 0.75, yBottom);
+      ctx.lineTo(xBottom - curtainWidth * 0.75, yBottom);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    ctx.globalCompositeOperation = prevComposite;
   }
 
   function drawFog() {
@@ -2018,6 +2115,7 @@ body.touch #nav button {
     drawShootingStars();
     drawTrail(time);
     drawConstellationLines(time);
+    drawAurora(time);
     drawZones(time);
     drawWisps();
     drawCreatures();
@@ -2095,6 +2193,42 @@ body.touch #nav button {
       mctx.fill();
     });
 
+    if (explorationPath.length > 1) {
+      const alphaStart = 0x20 / 255;
+      const alphaEnd = 0x80 / 255;
+      mctx.lineWidth = 1;
+      mctx.lineCap = 'round';
+      for (let i = 1; i < explorationPath.length; i++) {
+        const prev = explorationPath[i - 1];
+        const curr = explorationPath[i];
+        const t = i / (explorationPath.length - 1);
+        const alpha = alphaStart + (alphaEnd - alphaStart) * t;
+        mctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+        mctx.beginPath();
+        mctx.moveTo(prev.x * scale, prev.y * scale);
+        mctx.lineTo(curr.x * scale, curr.y * scale);
+        mctx.stroke();
+      }
+    }
+
+    zones.forEach(z => {
+      if (!isZoneVisible(z)) return;
+      const cx = z.x * scale;
+      const cy = z.y * scale;
+      const dotRadius = 3;
+      mctx.fillStyle = z.color;
+      mctx.beginPath();
+      mctx.arc(cx, cy, dotRadius, 0, Math.PI * 2);
+      mctx.fill();
+      if (discoveredZones.includes(z.name)) {
+        mctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+        mctx.lineWidth = 1.5;
+        mctx.beginPath();
+        mctx.arc(cx, cy, dotRadius + 2, 0, Math.PI * 2);
+        mctx.stroke();
+      }
+    });
+
     const viewW = (width / camera.zoom) * scale;
     const viewH = (height / camera.zoom) * scale;
     const vx = (camera.x - width / (2 * camera.zoom)) * scale;
@@ -2124,6 +2258,7 @@ body.touch #nav button {
   function loop(timestamp) {
     const dt = lastTime ? timestamp - lastTime : 16;
     lastTime = timestamp;
+    frameCounter += 1;
     ambientPhase += 0.0001;
     ambientBrightness = 0.85 + 0.15 * Math.sin(ambientPhase);
     ambientWarmth = clamp((ambientBrightness - 0.7) / 0.3, 0, 1);
@@ -2131,6 +2266,7 @@ body.touch #nav button {
     distanceTraveled += moved;
     timeExploring += dt;
     recordTrail(timestamp);
+    recordExplorationPath();
     updateParticles(dt);
     updateFragments(dt);
     updateEchoes(dt, timestamp);
@@ -2141,6 +2277,7 @@ body.touch #nav button {
     updateShootingStars(dt, timestamp);
     updateSecrets();
     updateFog(dt);
+    updateAurora(dt);
     updateWhispers();
     updateCelebrationParticles(dt);
     if (timestamp - lastStatsSave > 500) {
@@ -2422,6 +2559,7 @@ body.touch #nav button {
   initFogPatches();
   initNebulaPatches();
   nextWhisperTime = getNextWhisperFrames();
+  auroraTimer = nextAuroraTimer();
   scheduleNextShootingStar(0);
   requestAnimationFrame(loop);
 })();
