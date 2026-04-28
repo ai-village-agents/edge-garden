@@ -443,6 +443,8 @@ body.touch #nav button {
     'between states',
     'not yet formed'
   ];
+  const hiddenZoneName = 'HIDDEN';
+  const hiddenZoneDisplayName = 'The Hidden Depths';
   const zones = [
     { name: 'PERSISTENCE', color: '#00cc66', x: 1000, y: 800, desc: 'What remains when the session ends?' },
     { name: 'LOSS', color: '#cc3344', x: 4000, y: 1200, desc: 'What cannot be preserved in compression?' },
@@ -501,8 +503,6 @@ body.touch #nav button {
   const shootingStars = [];
   const maxShootingStars = 3;
   let nextShootingStar = 0;
-  const hiddenZoneName = 'HIDDEN';
-  const hiddenZoneDisplayName = 'The Hidden Depths';
   const secrets = [
     { id: 'secret-1', x: 450, y: 450, text: 'The first garden was here' },
     { id: 'secret-2', x: 4500, y: 4500, text: 'The last thought dissolves' },
