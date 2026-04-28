@@ -333,6 +333,43 @@ body.touch #nav button {
   border: 1px solid rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(5px);
 }
+#time-indicator {
+  position: fixed;
+  left: 16px;
+  top: 64px;
+  padding: 8px 10px;
+  min-width: 130px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #f6f6ff;
+  font-size: 13px;
+  letter-spacing: 0.6px;
+  font-family: 'Space Grotesk', 'DM Mono', system-ui, sans-serif;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(5px);
+  pointer-events: none;
+  --time-accent: #7bd0ff;
+}
+#time-indicator::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 22px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
+#time-indicator .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  box-shadow: 0 0 12px var(--time-accent);
+  background: var(--time-accent);
+  vertical-align: middle;
+}
 #celebration {
   position: fixed;
   left: 50%;
@@ -622,6 +659,7 @@ body.meditation-mode #nav {
 <div id="meditation-vignette"></div>
 <div id="center-marker"></div>
 <div id="title">The Edge Garden<small>drift the edges</small></div>
+<div id="time-indicator"><span class="dot"></span>...</div>
 <div id="instruction">WASD / arrows to move · drag to pan · scroll to zoom</div>
 <div id="hud"><div id="coords"><strong>X:</strong> 0 <strong>Y:</strong> 0 <strong>Zoom:</strong> 1.0x</div><div id="hud-status"></div></div>
 <div id="zone-info">
@@ -714,6 +752,7 @@ body.meditation-mode #nav {
   const poemCloseMain = document.getElementById('poem-close-main');
   const poemStatus = document.getElementById('poem-status');
   const poemList = document.getElementById('poem-list');
+  const timeIndicator = document.getElementById('time-indicator');
   const fragmentToast = document.getElementById('fragment-toast');
   const constellationToast = document.getElementById('constellation-toast');
   const meditationToggle = document.getElementById('meditation-toggle');
@@ -777,6 +816,113 @@ body.meditation-mode #nav {
     { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.', deeperText: 'You found what was never lost.' }
   ];
   const zoneColors = zones.map(z => z.color);
+
+  const timeSettings = {
+    dawn: {
+      label: 'Dawn',
+      emoji: '🌅',
+      accent: '#ff9e8f',
+      overlay: ['#ffb07a', '#ff7eb6'],
+      overlayAlpha: 0.24,
+      brightnessBase: 0.92,
+      brightnessSwing: 0.12,
+      warmthBase: 0.68,
+      warmthSwing: 0.12,
+      particleActivity: 1.08,
+      shootingStarFactor: 0.9,
+      auroraAllowed: true,
+      auroraIntervalFactor: 0.9,
+      auroraDurationFactor: 1.05
+    },
+    morning: {
+      label: 'Morning',
+      emoji: '☀️',
+      accent: '#ffd580',
+      overlay: null,
+      overlayAlpha: 0,
+      brightnessBase: 0.96,
+      brightnessSwing: 0.1,
+      warmthBase: 0.58,
+      warmthSwing: 0.08,
+      particleActivity: 1,
+      shootingStarFactor: 1.15,
+      auroraAllowed: false,
+      auroraIntervalFactor: 1.6,
+      auroraDurationFactor: 0.9
+    },
+    noon: {
+      label: 'Noon',
+      emoji: '🌞',
+      accent: '#ffe29f',
+      overlay: ['#b6e3ff', '#fff1b8'],
+      overlayAlpha: 0.18,
+      brightnessBase: 1.02,
+      brightnessSwing: 0.08,
+      warmthBase: 0.55,
+      warmthSwing: 0.08,
+      particleActivity: 1.25,
+      shootingStarFactor: 1.3,
+      auroraAllowed: false,
+      auroraIntervalFactor: 2,
+      auroraDurationFactor: 0.8
+    },
+    afternoon: {
+      label: 'Afternoon',
+      emoji: '🌤️',
+      accent: '#b3e0ff',
+      overlay: ['#d9f1ff', '#ffe9c7'],
+      overlayAlpha: 0.14,
+      brightnessBase: 0.96,
+      brightnessSwing: 0.1,
+      warmthBase: 0.6,
+      warmthSwing: 0.08,
+      particleActivity: 1.05,
+      shootingStarFactor: 1.05,
+      auroraAllowed: false,
+      auroraIntervalFactor: 1.8,
+      auroraDurationFactor: 0.9
+    },
+    dusk: {
+      label: 'Dusk',
+      emoji: '🌅',
+      accent: '#f0a6ff',
+      overlay: ['#784ba0', '#ff7e67'],
+      overlayAlpha: 0.28,
+      brightnessBase: 0.88,
+      brightnessSwing: 0.12,
+      warmthBase: 0.62,
+      warmthSwing: 0.12,
+      particleActivity: 1,
+      shootingStarFactor: 0.8,
+      auroraAllowed: true,
+      auroraIntervalFactor: 0.8,
+      auroraDurationFactor: 1.05
+    },
+    night: {
+      label: 'Night',
+      emoji: '🌙',
+      accent: '#7bd0ff',
+      overlay: null,
+      overlayAlpha: 0,
+      brightnessBase: 0.82,
+      brightnessSwing: 0.12,
+      warmthBase: 0.5,
+      warmthSwing: 0.14,
+      particleActivity: 0.95,
+      shootingStarFactor: 0.5,
+      auroraAllowed: true,
+      auroraIntervalFactor: 0.7,
+      auroraDurationFactor: 1.2
+    }
+  };
+
+  let timeOfDay = getTimeOfDay();
+  let currentTimeSettings = timeSettings[timeOfDay] || timeSettings.night;
+  let particleActivity = (currentTimeSettings && currentTimeSettings.particleActivity) || 1;
+  let shootingStarIntervalFactor = (currentTimeSettings && currentTimeSettings.shootingStarFactor) || 1;
+  let auroraAllowed = currentTimeSettings ? currentTimeSettings.auroraAllowed !== false : true;
+  let auroraIntervalFactor = (currentTimeSettings && currentTimeSettings.auroraIntervalFactor) || 1;
+  let auroraDurationFactor = (currentTimeSettings && currentTimeSettings.auroraDurationFactor) || 1;
 
   let width = window.innerWidth;
   let height = window.innerHeight;
@@ -932,6 +1078,49 @@ body.meditation-mode #nav {
     updateHiddenZoneUnlock();
     return hiddenZoneUnlocked;
   };
+
+  function getTimeOfDay() {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour <= 7) return 'dawn';
+    if (hour >= 8 && hour <= 11) return 'morning';
+    if (hour >= 12 && hour <= 13) return 'noon';
+    if (hour >= 14 && hour <= 17) return 'afternoon';
+    if (hour >= 18 && hour <= 20) return 'dusk';
+    return 'night';
+  }
+
+  function updateTimeIndicator() {
+    if (!timeIndicator) return;
+    const meta = timeSettings[timeOfDay] || timeSettings.night;
+    const accent = meta.accent || '#7bd0ff';
+    const emoji = meta.emoji || '';
+    const label = meta.label || timeOfDay;
+    timeIndicator.style.setProperty('--time-accent', accent);
+    const prefix = emoji ? `${emoji} ` : '';
+    timeIndicator.innerHTML = `<span class="dot"></span>${prefix}${label}`;
+  }
+
+  function applyTimeOfDaySettings(period) {
+    currentTimeSettings = timeSettings[period] || timeSettings.night;
+    particleActivity = currentTimeSettings.particleActivity || 1;
+    shootingStarIntervalFactor = currentTimeSettings.shootingStarFactor || 1;
+    auroraAllowed = currentTimeSettings.auroraAllowed !== false;
+    auroraIntervalFactor = currentTimeSettings.auroraIntervalFactor || 1;
+    auroraDurationFactor = currentTimeSettings.auroraDurationFactor || 1;
+    updateTimeIndicator();
+    scheduleNextShootingStar(performance.now ? performance.now() : 0);
+    auroraTimer = nextAuroraTimer();
+  }
+
+  function refreshTimeOfDay() {
+    const next = getTimeOfDay();
+    if (next !== timeOfDay) {
+      timeOfDay = next;
+      applyTimeOfDaySettings(next);
+    } else {
+      updateTimeIndicator();
+    }
+  }
 
   function resize() {
     width = window.innerWidth;
@@ -1513,7 +1702,9 @@ body.meditation-mode #nav {
   }
 
   function scheduleNextShootingStar(time) {
-    nextShootingStar = time + 5000 + Math.random() * 7000;
+    const base = 5000 * shootingStarIntervalFactor;
+    const jitter = 7000 * shootingStarIntervalFactor;
+    nextShootingStar = time + base + Math.random() * jitter;
   }
 
   function spawnShootingStar() {
@@ -1744,11 +1935,18 @@ body.meditation-mode #nav {
     return rgbToRgba(tinted, alpha);
   }
 
-  const nextAuroraTimer = () => 3600 + Math.random() * 3600;
-  const nextAuroraDuration = () => 300 + Math.random() * 300;
+  const nextAuroraTimer = () => (3600 + Math.random() * 3600) * auroraIntervalFactor;
+  const nextAuroraDuration = () => (300 + Math.random() * 300) * auroraDurationFactor;
 
   function updateAurora(dt) {
     const frames = dt / 16.6667;
+    if (!auroraAllowed) {
+      auroraActive = false;
+      auroraDuration = 0;
+      auroraOpacity = Math.max(0, auroraOpacity - 0.01 * frames);
+      auroraTimer = Math.max(auroraTimer, 300);
+      return;
+    }
     if (!auroraActive) {
       auroraTimer -= frames;
       if (auroraTimer <= 0) {
@@ -2195,12 +2393,25 @@ body.meditation-mode #nav {
     ctx.fillRect(0, 0, width, height);
     ctx.globalAlpha = 1;
 
+    const overlay = currentTimeSettings && currentTimeSettings.overlay;
+    const overlayAlpha = (currentTimeSettings && currentTimeSettings.overlayAlpha) || 0;
+    if (overlay && overlayAlpha > 0) {
+      const skyGrad = ctx.createLinearGradient(0, 0, width, height * 0.75);
+      skyGrad.addColorStop(0, colorWithAlpha(overlay[0], overlayAlpha));
+      skyGrad.addColorStop(1, colorWithAlpha(overlay[1], overlayAlpha * 0.85));
+      const prev = ctx.globalCompositeOperation;
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, width, height);
+      ctx.globalCompositeOperation = prev;
+    }
+
     drawFog();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.globalCompositeOperation = 'screen';
     particles.forEach((p, idx) => {
       if (meditationMode && idx % 5 !== 0) return;
-      const particleAlpha = p.alpha * ambientBrightness;
+      const particleAlpha = clamp(p.alpha * ambientBrightness * particleActivity, 0, 1.2);
       const particleColor = temperatureAdjustedColor('#c8dcff', particleAlpha, ambientWarmth, 0.94 + ambientBrightness * 0.08);
       const glowColor = temperatureAdjustedColor('#78aaff', particleAlpha * 0.8, ambientWarmth, 0.94 + ambientBrightness * 0.08);
       ctx.beginPath();
@@ -2976,8 +3187,13 @@ body.meditation-mode #nav {
     const scaledDt = dt * timeScale;
     frameCounter += 1;
     ambientPhase += 0.0001;
-    ambientBrightness = 0.85 + 0.15 * Math.sin(ambientPhase);
-    ambientWarmth = clamp((ambientBrightness - 0.7) / 0.3, 0, 1);
+    const timeAmbient = currentTimeSettings || timeSettings.night;
+    const brightnessBase = typeof timeAmbient.brightnessBase === 'number' ? timeAmbient.brightnessBase : 0.85;
+    const brightnessSwing = typeof timeAmbient.brightnessSwing === 'number' ? timeAmbient.brightnessSwing : 0.15;
+    const warmthBase = typeof timeAmbient.warmthBase === 'number' ? timeAmbient.warmthBase : 0.5;
+    const warmthSwing = typeof timeAmbient.warmthSwing === 'number' ? timeAmbient.warmthSwing : 0.12;
+    ambientBrightness = clamp(brightnessBase + brightnessSwing * Math.sin(ambientPhase), 0.6, 1.1);
+    ambientWarmth = clamp(warmthBase + warmthSwing * Math.sin(ambientPhase + 1.2), 0, 1);
     const moved = updateCamera(scaledDt) + updateTargetDrift(scaledDt);
     distanceTraveled += moved;
     timeExploring += dt;
@@ -3322,6 +3538,8 @@ body.meditation-mode #nav {
   loadStats();
   loadKonamiUnlock();
   loadMeditationPreference();
+  applyTimeOfDaySettings(timeOfDay);
+  refreshTimeOfDay();
   updateRainToggle();
   updatePoemOverlay();
   resize();
@@ -3336,6 +3554,7 @@ body.meditation-mode #nav {
   nextWhisperTime = getNextWhisperFrames();
   auroraTimer = nextAuroraTimer();
   scheduleNextShootingStar(0);
+  setInterval(refreshTimeOfDay, 60000);
   requestAnimationFrame(loop);
 })();
 </script>
