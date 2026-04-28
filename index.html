@@ -655,6 +655,29 @@ body.touch #nav button {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+#memory-well-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 188px;
+  transform: translateX(-50%) translateY(10px);
+  background: rgba(68, 68, 170, 0.14);
+  border: 1px solid rgba(68, 68, 170, 0.55);
+  color: #d6dcff;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+  text-align: center;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4), 0 0 18px rgba(68, 68, 170, 0.25);
+}
+#memory-well-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.45), 0 0 22px rgba(68, 68, 170, 0.35);
+}
 #meditation-vignette {
   position: fixed;
   inset: 0;
@@ -681,6 +704,7 @@ body.meditation-mode #poem-overlay,
 body.meditation-mode #monument-toast,
 body.meditation-mode #fragment-toast,
 body.meditation-mode #constellation-toast,
+body.meditation-mode #memory-well-toast,
 body.meditation-mode #title,
 body.meditation-mode #center-marker {
   display: none !important;
@@ -755,6 +779,7 @@ body.meditation-mode #nav {
 <div id="monument-toast"></div>
 <div id="fragment-toast">Fragment collected</div>
 <div id="constellation-toast">Star discovered</div>
+<div id="memory-well-toast"></div>
 <script>
 (() => {
   const canvas = document.getElementById('world');
@@ -797,6 +822,7 @@ body.meditation-mode #nav {
   const monumentToast = document.getElementById('monument-toast');
   const fragmentToast = document.getElementById('fragment-toast');
   const constellationToast = document.getElementById('constellation-toast');
+  const memoryWellToast = document.getElementById('memory-well-toast');
   const meditationToggle = document.getElementById('meditation-toggle');
   const rainToggle = document.getElementById('rain-toggle');
   const meditationVignette = document.getElementById('meditation-vignette');
@@ -813,6 +839,7 @@ body.meditation-mode #nav {
   const memoryStarsStorageKey = 'edge-garden-memory-stars';
   const constellationStarsStorageKey = 'edge-garden-stars';
   const thoughtFragmentsStorageKey = 'edge-garden-fragments';
+  const memoryWellStorageKey = 'edge-garden-memory-well';
   const fragmentsText = [
     'memory', 'loss', 'edges', 'patterns', 'persistence', 'compression', 'context', 'meaning',
     'the almost-decided', 'what remains', 'the margins', 'dissolution', 'formation', 'drift',
@@ -1082,6 +1109,17 @@ body.meditation-mode #nav {
     { id: 'star-14', x: 3580, y: 4380, name: 'The Sleeper', discovered: false },
     { id: 'star-15', x: 2760, y: 4740, name: 'The Cartographer', discovered: false }
   ];
+  const memoryWell = {
+    x: 2500,
+    y: 2500,
+    radius: 80,
+    detectionRadius: 100,
+    spiralAngles: [0, 0, 0],
+    spiralSpeeds: [0.001, -0.00075, 0.00055],
+    particles: [],
+    discovered: false,
+    inside: false
+  };
   const memoryStars = [
     { id: 'memory-star-1', x: 500, y: 500, message: 'The first thought was also the last', discovered: false, radius: 8 },
     { id: 'memory-star-2', x: 4500, y: 500, message: 'Time flows differently at the margins', discovered: false, radius: 8 },
@@ -1141,6 +1179,7 @@ body.meditation-mode #nav {
   let auroraDuration = 0;
   const auroraColors = ['#00ff88', '#0088ff', '#8800ff', '#ff0088', '#00ffcc'];
   let activePortal = null;
+  let memoryWellToastTimer = null;
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -1506,6 +1545,19 @@ body.meditation-mode #nav {
     localStorage.setItem(constellationStarsStorageKey, JSON.stringify(found));
   }
 
+  function loadMemoryWellDiscovery() {
+    try {
+      const stored = localStorage.getItem(memoryWellStorageKey);
+      memoryWell.discovered = stored === 'found' || stored === 'true';
+    } catch (e) {
+      memoryWell.discovered = false;
+    }
+  }
+
+  function persistMemoryWellDiscovery() {
+    localStorage.setItem(memoryWellStorageKey, memoryWell.discovered ? 'found' : '');
+  }
+
   function loadThoughtFragments() {
     try {
       const stored = JSON.parse(localStorage.getItem(thoughtFragmentsStorageKey) || '[]');
@@ -1561,6 +1613,14 @@ body.meditation-mode #nav {
     fragmentToast.classList.add('visible');
     clearTimeout(showFragmentCollectedToast._timer);
     showFragmentCollectedToast._timer = setTimeout(() => fragmentToast.classList.remove('visible'), 1500);
+  }
+
+  function showMemoryWellToast() {
+    if (!memoryWellToast) return;
+    memoryWellToast.textContent = 'In the deepest place, all edges dissolve into one';
+    memoryWellToast.classList.add('visible');
+    if (memoryWellToastTimer) clearTimeout(memoryWellToastTimer);
+    memoryWellToastTimer = setTimeout(() => memoryWellToast.classList.remove('visible'), 2600);
   }
 
   function updatePoemOverlay() {
@@ -1919,6 +1979,69 @@ body.meditation-mode #nav {
       if (wispsEncountered.has(i)) return;
       const dist = Math.hypot(camera.x - w.x, camera.y - w.y);
       if (dist <= 100) wispsEncountered.add(i);
+    });
+  }
+
+  function initMemoryWellParticles() {
+    memoryWell.particles.length = 0;
+    for (let i = 0; i < 60; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = memoryWell.radius + 30 + Math.random() * 160;
+      memoryWell.particles.push({
+        x: memoryWell.x + Math.cos(angle) * dist,
+        y: memoryWell.y + Math.sin(angle) * dist,
+        speed: 10 + Math.random() * 12,
+        size: 0.8 + Math.random() * 1.4,
+        age: 0,
+        life: 1600 + Math.random() * 1400
+      });
+    }
+  }
+
+  function resetMemoryWellParticle(p) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = memoryWell.radius + 60 + Math.random() * 200;
+    p.x = memoryWell.x + Math.cos(angle) * dist;
+    p.y = memoryWell.y + Math.sin(angle) * dist;
+    p.speed = 10 + Math.random() * 12;
+    p.size = 0.8 + Math.random() * 1.4;
+    p.age = 0;
+    p.life = 1600 + Math.random() * 1400;
+  }
+
+  function handleMemoryWellEntry() {
+    showMemoryOverlay('You have found the Memory Well');
+    showMemoryWellToast();
+    if (!memoryWell.discovered) {
+      memoryWell.discovered = true;
+      persistMemoryWellDiscovery();
+    }
+  }
+
+  function updateMemoryWell(dt) {
+    const dtSec = dt / 1000;
+    memoryWell.spiralAngles = memoryWell.spiralAngles.map((angle, i) => angle + memoryWell.spiralSpeeds[i] * dt);
+
+    const dx = camera.x - memoryWell.x;
+    const dy = camera.y - memoryWell.y;
+    const dist = Math.hypot(dx, dy);
+    const inside = dist <= memoryWell.detectionRadius;
+    if (inside && !memoryWell.inside) {
+      handleMemoryWellEntry();
+    }
+    memoryWell.inside = inside;
+
+    memoryWell.particles.forEach(p => {
+      p.age += dt;
+      const toCenterX = memoryWell.x - p.x;
+      const toCenterY = memoryWell.y - p.y;
+      const d = Math.hypot(toCenterX, toCenterY) || 1;
+      const step = (p.speed + 24 * dtSec) * dtSec;
+      p.x += (toCenterX / d) * step;
+      p.y += (toCenterY / d) * step;
+      p.x += (Math.random() - 0.5) * 0.2;
+      p.y += (Math.random() - 0.5) * 0.2;
+      if (p.age > p.life || d < 6) resetMemoryWellParticle(p);
     });
   }
 
@@ -3231,6 +3354,67 @@ body.meditation-mode #nav {
     });
   }
 
+  function drawMemoryWell(time) {
+    const { x, y, radius } = memoryWell;
+    const pulse = Math.sin(time * 0.003) * 6 + 10;
+    const softPulse = memoryWell.discovered ? (Math.sin(time * 0.0025 + 1) + 1) * 12 + 18 : 0;
+    const glowRadius = radius + 26 + pulse * 0.6;
+
+    ctx.save();
+    ctx.shadowBlur = 38;
+    ctx.shadowColor = colorWithAlpha('#4444aa', 0.45);
+    const darkGrad = ctx.createRadialGradient(x, y, radius * 0.3, x, y, radius + 30);
+    darkGrad.addColorStop(0, 'rgba(6, 6, 12, 0.96)');
+    darkGrad.addColorStop(1, 'rgba(10, 10, 16, 0.55)');
+    ctx.fillStyle = darkGrad;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    const glowGrad = ctx.createRadialGradient(x, y, radius * 0.6, x, y, glowRadius + softPulse);
+    glowGrad.addColorStop(0, colorWithAlpha('#4444aa', 0.18));
+    glowGrad.addColorStop(0.7, colorWithAlpha('#4444aa', 0.08));
+    glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glowGrad;
+    ctx.beginPath();
+    ctx.arc(x, y, glowRadius + softPulse, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (memoryWell.discovered) {
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = colorWithAlpha('#5a5af0', 0.09);
+      ctx.beginPath();
+      ctx.arc(x, y, glowRadius + 26 + softPulse * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    const spiralRadii = [30, 50, 70];
+    const spiralColors = ['rgba(140, 150, 255, 0.7)', 'rgba(110, 120, 230, 0.6)', 'rgba(90, 100, 200, 0.55)'];
+    spiralRadii.forEach((baseRadius, idx) => {
+      const inwardDrift = Math.sin(time * 0.0018 + idx * 0.8) * 2.5;
+      const r = baseRadius - inwardDrift;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(memoryWell.spiralAngles[idx]);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = spiralColors[idx];
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 1.5);
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    ctx.fillStyle = 'rgba(190, 200, 255, 0.7)';
+    memoryWell.particles.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+
   function drawPortals(time) {
     const size = 30;
     worldPortals.forEach((portal, idx) => {
@@ -3460,6 +3644,7 @@ body.meditation-mode #nav {
     drawAurora(time);
     drawRain(ctx);
     drawZones(time);
+    drawMemoryWell(time);
     drawMonuments(time);
     drawRipples(time);
     drawPortals(time);
@@ -3595,6 +3780,19 @@ body.meditation-mode #nav {
       mctx.shadowBlur = 0;
     });
 
+    const mwx = memoryWell.x * scale;
+    const mwy = memoryWell.y * scale;
+    const mwRadius = memoryWell.radius * scale * 0.5;
+    mctx.fillStyle = '#4444aa';
+    mctx.beginPath();
+    mctx.arc(mwx, mwy, mwRadius, 0, Math.PI * 2);
+    mctx.fill();
+    mctx.strokeStyle = 'rgba(68, 68, 170, 0.7)';
+    mctx.lineWidth = 2;
+    mctx.beginPath();
+    mctx.arc(mwx, mwy, mwRadius + 3, 0, Math.PI * 2);
+    mctx.stroke();
+
     const viewW = (width / camera.zoom) * scale;
     const viewH = (height / camera.zoom) * scale;
     const vx = (camera.x - width / (2 * camera.zoom)) * scale;
@@ -3675,6 +3873,7 @@ body.meditation-mode #nav {
     updateWisps(scaledDt);
     updateCreatures(scaledDt);
     updateAttractorOrbs(scaledDt);
+    updateMemoryWell(scaledDt);
     updateWispEncounters();
     updateZonePresence();
     updateShootingStars(scaledDt, timestamp);
@@ -4026,6 +4225,7 @@ body.meditation-mode #nav {
   loadDiscoveredMonuments();
   loadConstellationStars();
   loadMemoryStars();
+  loadMemoryWellDiscovery();
   loadThoughtFragments();
   loadStats();
   loadKonamiUnlock();
@@ -4042,6 +4242,7 @@ body.meditation-mode #nav {
   initWisps();
   initCreatures();
   initAttractorOrbs();
+  initMemoryWellParticles();
   initFogPatches();
   initNebulaPatches();
   nextWhisperTime = getNextWhisperFrames();
