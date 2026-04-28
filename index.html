@@ -103,6 +103,93 @@ body {
   font-size: 13px;
   line-height: 1.4;
 }
+#seed-action {
+  margin-top: 10px;
+  text-align: right;
+}
+#seed-button {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: #e6e6f0;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+#seed-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+#seed-modal {
+  position: fixed;
+  left: 50%;
+  bottom: 140px;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(18, 18, 26, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-width: 260px;
+  max-width: 360px;
+  box-shadow: 0 0 26px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+#seed-modal.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+#seed-modal h4 {
+  margin: 0 0 8px;
+  letter-spacing: 0.5px;
+  font-size: 14px;
+}
+.seed-field {
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: #f3f3ff;
+  font-size: 13px;
+}
+.seed-field::placeholder { color: rgba(230, 230, 240, 0.6); }
+#plant-button {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(135deg, rgba(68, 187, 120, 0.4), rgba(102, 178, 255, 0.3));
+  color: #f6f6ff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+#plant-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+#seed-confirm {
+  position: fixed;
+  left: 50%;
+  bottom: 120px;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #e6e6f0;
+  letter-spacing: 0.5px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
 #minimap {
   position: fixed;
   right: 14px;
@@ -164,6 +251,22 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(5px);
 }
+#celebration {
+  position: fixed;
+  left: 50%;
+  top: 18%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 13px;
+  letter-spacing: 0.6px;
+  color: #f2f2ff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
 </style>
 </head>
 <body>
@@ -175,12 +278,23 @@ body {
 <div id="zone-info">
   <h3 id="zone-name"></h3>
   <p id="zone-desc"></p>
+  <div id="seed-action">
+    <button id="seed-button">🌱 plant a seed here</button>
+  </div>
 </div>
+<div id="seed-modal">
+  <h4>Plant a seed</h4>
+  <input id="seed-message" class="seed-field" type="text" placeholder="what grows at this edge?">
+  <input id="seed-name" class="seed-field" type="text" placeholder="who tends this garden?">
+  <button id="plant-button">plant</button>
+</div>
+<div id="seed-confirm">seed planted</div>
 <div id="nav">
   <a href="about.html">about</a>
   <a href="worlds.html">worlds</a>
 </div>
 <div id="minimap"></div>
+<div id="celebration">You have found all edges</div>
 <script>
 (() => {
   const canvas = document.getElementById('world');
@@ -193,6 +307,13 @@ body {
   const zoneInfo = document.getElementById('zone-info');
   const zoneName = document.getElementById('zone-name');
   const zoneDesc = document.getElementById('zone-desc');
+  const seedButton = document.getElementById('seed-button');
+  const seedModal = document.getElementById('seed-modal');
+  const seedMessage = document.getElementById('seed-message');
+  const seedName = document.getElementById('seed-name');
+  const plantButton = document.getElementById('plant-button');
+  const seedConfirm = document.getElementById('seed-confirm');
+  const celebrationEl = document.getElementById('celebration');
 
   const worldSize = 5000;
   const zoneRadius = 150;
@@ -229,6 +350,13 @@ body {
   const particles = [];
   const particleCount = 120;
   const fragments = [];
+  const trailPoints = [];
+  const maxTrail = 50;
+  let lastTrailAdd = 0;
+  let currentZone = null;
+  let discoveredZones = [];
+  let celebrationTriggered = false;
+  const celebrationParticles = [];
 
   function resize() {
     width = window.innerWidth;
@@ -276,6 +404,47 @@ body {
     });
   }
 
+  function loadDiscoveredZones() {
+    try {
+      const stored = localStorage.getItem('edge-garden-discovered');
+      const parsed = JSON.parse(stored || '[]');
+      if (Array.isArray(parsed)) discoveredZones = parsed;
+    } catch (e) {
+      discoveredZones = [];
+    }
+    if (discoveredZones.length >= zones.length) {
+      celebrationTriggered = true;
+    }
+  }
+
+  function persistDiscoveredZones() {
+    const unique = Array.from(new Set(discoveredZones));
+    localStorage.setItem('edge-garden-discovered', JSON.stringify(unique));
+  }
+
+  function markZoneDiscovered(name) {
+    if (!name) return;
+    if (!discoveredZones.includes(name)) {
+      discoveredZones.push(name);
+      persistDiscoveredZones();
+      if (discoveredZones.length >= zones.length) triggerCelebration();
+    } else if (!celebrationTriggered && discoveredZones.length >= zones.length) {
+      triggerCelebration();
+    }
+  }
+
+  function recordTrail(time) {
+    const last = trailPoints[trailPoints.length - 1];
+    const dx = last ? camera.x - last.x : 0;
+    const dy = last ? camera.y - last.y : 0;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 8 || time - lastTrailAdd > 150) {
+      trailPoints.push({ x: camera.x, y: camera.y, birth: time });
+      if (trailPoints.length > maxTrail) trailPoints.shift();
+      lastTrailAdd = time;
+    }
+  }
+
   function updateCamera(dt) {
     const moveBase = 380;
     const speed = moveBase * dt / 1000 / camera.zoom;
@@ -315,6 +484,75 @@ body {
     fragments.forEach(f => {
       f.x = (f.x + f.vx * dt / 1000 + worldSize) % worldSize;
       f.y = (f.y + f.vy * dt / 1000 + worldSize) % worldSize;
+    });
+  }
+
+  function drawTrail(time) {
+    const now = time || 0;
+    ctx.shadowBlur = 10;
+    trailPoints.forEach((p, i) => {
+      const age = Math.min(1, (now - p.birth) / 2200);
+      const alpha = (1 - age) * 0.38;
+      const size = 3.6 - age * 2;
+      ctx.fillStyle = `rgba(150, 195, 255, ${alpha})`;
+      ctx.shadowColor = `rgba(120, 180, 255, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.shadowBlur = 0;
+  }
+
+  function drawConstellationLines(time) {
+    const pulse = Math.sin(time * 0.003) * 0.05 + 0.2; // range ~0.15-0.25
+    const widthPulse = (Math.sin(time * 0.004) + 1) * 0.3;
+
+    function drawGradientLine(a, b, startColor, endColor) {
+      const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+      grad.addColorStop(0, startColor);
+      grad.addColorStop(1, endColor);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 1.4 + widthPulse;
+      ctx.globalAlpha = pulse;
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = startColor;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    }
+
+    function drawSoftLine(a, b) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.2 + widthPulse * 0.4;
+      ctx.globalAlpha = 0.16 + Math.sin(time * 0.002 + a.x) * 0.03;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.4)';
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+    }
+
+    const zoneByName = name => zones.find(z => z.name === name);
+    const persistence = zoneByName('PERSISTENCE');
+    const loss = zoneByName('LOSS');
+    const patterns = zoneByName('PATTERNS');
+    const edges = zoneByName('EDGES');
+    const deep = zoneByName('DEEP');
+
+    if (persistence && loss) {
+      drawGradientLine(persistence, loss, 'rgb(0, 204, 102)', 'rgb(204, 51, 68)');
+    }
+    if (patterns && edges) {
+      drawGradientLine(patterns, edges, 'rgb(68, 136, 204)', 'rgb(153, 68, 204)');
+    }
+    [persistence, loss, patterns, edges].forEach(z => {
+      if (z && deep) drawSoftLine(z, deep);
     });
   }
 
@@ -389,8 +627,60 @@ body {
 
   function drawWorld(time) {
     setWorldTransform();
+    drawTrail(time);
+    drawConstellationLines(time);
     drawZones(time);
     drawFragments();
+  }
+
+  function updateCelebrationParticles(dt) {
+    for (let i = celebrationParticles.length - 1; i >= 0; i--) {
+      const p = celebrationParticles[i];
+      p.age += dt;
+      p.x += p.vx * dt / 1000;
+      p.y += p.vy * dt / 1000;
+      p.vy += 14 * dt / 1000;
+      if (p.age > p.life) celebrationParticles.splice(i, 1);
+    }
+  }
+
+  function drawCelebrationParticles() {
+    if (!celebrationParticles.length) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.globalCompositeOperation = 'screen';
+    celebrationParticles.forEach(p => {
+      const alpha = Math.max(0, 1 - p.age / p.life);
+      ctx.fillStyle = `rgba(255, 215, 130, ${alpha * 0.7})`;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = `rgba(255, 200, 150, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.shadowBlur = 0;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function triggerCelebration() {
+    if (celebrationTriggered) return;
+    celebrationTriggered = true;
+    celebrationEl.style.opacity = '1';
+    setTimeout(() => celebrationEl.style.opacity = '0', 2400);
+    const cx = width / 2;
+    const cy = height * 0.18;
+    for (let i = 0; i < 44; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 90 + Math.random() * 130;
+      celebrationParticles.push({
+        x: cx,
+        y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed * 0.6,
+        life: 1200 + Math.random() * 600,
+        age: 0,
+        size: 1.5 + Math.random() * 2.5
+      });
+    }
   }
 
   function drawMinimap() {
@@ -431,10 +721,13 @@ body {
     const dt = lastTime ? timestamp - lastTime : 16;
     lastTime = timestamp;
     updateCamera(dt);
+    recordTrail(timestamp);
     updateParticles(dt);
     updateFragments(dt);
+    updateCelebrationParticles(dt);
     drawBackground();
     drawWorld(timestamp);
+    drawCelebrationParticles();
     drawMinimap();
     updateHUD();
     requestAnimationFrame(loop);
@@ -454,12 +747,33 @@ body {
       return Math.hypot(dx, dy) <= zoneRadius + 30;
     });
     if (hit) {
+      currentZone = hit;
       zoneName.textContent = hit.name;
       zoneDesc.textContent = hit.desc;
       zoneInfo.classList.add('visible');
       clearTimeout(handleZoneClick._timer);
       handleZoneClick._timer = setTimeout(() => zoneInfo.classList.remove('visible'), 4200);
+      markZoneDiscovered(hit.name);
+      seedModal.classList.remove('visible');
     }
+  }
+
+  function openSeedModal() {
+    if (!currentZone) return;
+    clearTimeout(handleZoneClick._timer);
+    zoneInfo.classList.add('visible');
+    seedModal.classList.add('visible');
+    setTimeout(() => seedMessage.focus(), 20);
+  }
+
+  function closeSeedModal() {
+    seedModal.classList.remove('visible');
+  }
+
+  function showSeedConfirm() {
+    seedConfirm.style.opacity = '1';
+    clearTimeout(showSeedConfirm._timer);
+    showSeedConfirm._timer = setTimeout(() => seedConfirm.style.opacity = '0', 1500);
   }
 
   canvas.addEventListener('pointerdown', e => {
@@ -481,6 +795,26 @@ body {
     const worldPos = screenToWorld(e.clientX, e.clientY);
     handleZoneClick(worldPos);
   });
+  seedButton.addEventListener('click', () => {
+    if (zoneInfo.classList.contains('visible') && currentZone) openSeedModal();
+  });
+  plantButton.addEventListener('click', () => {
+    if (!currentZone) return;
+    const concept = currentZone.name.toLowerCase();
+    const seedText = seedMessage.value.trim();
+    const gardener = seedName.value.trim();
+    const url = `https://github.com/ai-village-agents/edge-garden/issues/new?template=seed.yml&concept=${encodeURIComponent(concept)}&seed=${encodeURIComponent(seedText)}&gardener=${encodeURIComponent(gardener)}`;
+    window.open(url, '_blank');
+    showSeedConfirm();
+    closeSeedModal();
+    seedMessage.value = '';
+    seedName.value = '';
+  });
+  window.addEventListener('pointerdown', e => {
+    if (seedModal.classList.contains('visible') && !seedModal.contains(e.target) && e.target !== seedButton) {
+      closeSeedModal();
+    }
+  });
 
   window.addEventListener('wheel', e => {
     const zoomFactor = Math.exp(-e.deltaY * 0.001);
@@ -488,6 +822,10 @@ body {
   }, { passive: true });
 
   window.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeSeedModal();
+      return;
+    }
     keys[e.code] = true;
   });
   window.addEventListener('keyup', e => {
@@ -499,6 +837,7 @@ body {
     initParticles();
   });
 
+  loadDiscoveredZones();
   resize();
   initParticles();
   initFragments();
