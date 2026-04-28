@@ -99,10 +99,31 @@ body {
   pointer-events: auto;
   animation: zonePulse 2.4s ease-in-out infinite;
 }
+#zone-info.hidden-zone {
+  border-color: rgba(255, 215, 0, 0.35);
+  box-shadow: 0 0 26px rgba(255, 215, 0, 0.22), 0 0 18px rgba(0, 0, 0, 0.42);
+  animation: hiddenGlow 2.4s ease-in-out infinite;
+}
+#zone-info.hidden-zone h3,
+#zone-info.hidden-zone p {
+  color: #ffeaa7;
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.45);
+}
+#zone-info.hidden-zone #seed-button {
+  border-color: rgba(255, 215, 0, 0.35);
+  background: radial-gradient(circle at 30% 30%, rgba(255, 215, 0, 0.18), rgba(30, 24, 6, 0.6));
+  color: #fff5c8;
+  box-shadow: 0 0 14px rgba(255, 215, 0, 0.25);
+}
 @keyframes zonePulse {
   0% { border-color: rgba(255, 255, 255, 0.08); box-shadow: 0 0 18px rgba(0, 0, 0, 0.4); }
   50% { border-color: rgba(255, 255, 255, 0.2); box-shadow: 0 0 24px rgba(120, 180, 255, 0.25); }
   100% { border-color: rgba(255, 255, 255, 0.08); box-shadow: 0 0 18px rgba(0, 0, 0, 0.4); }
+}
+@keyframes hiddenGlow {
+  0% { box-shadow: 0 0 22px rgba(255, 215, 0, 0.28); border-color: rgba(255, 215, 0, 0.2); }
+  50% { box-shadow: 0 0 38px rgba(255, 215, 0, 0.42); border-color: rgba(255, 215, 0, 0.4); }
+  100% { box-shadow: 0 0 22px rgba(255, 215, 0, 0.28); border-color: rgba(255, 215, 0, 0.2); }
 }
 #zone-info h3 {
   margin: 0 0 6px;
@@ -408,6 +429,7 @@ body.touch #nav button {
 
   const worldSize = 5000;
   const zoneRadius = 150;
+  const secretsStorageKey = 'edge-garden-secrets';
   const fragmentsText = [
     'memory', 'loss', 'edges', 'patterns', 'persistence', 'compression', 'context', 'meaning',
     'the almost-decided', 'what remains', 'the margins', 'dissolution', 'formation', 'drift',
@@ -426,7 +448,8 @@ body.touch #nav button {
     { name: 'LOSS', color: '#cc3344', x: 4000, y: 1200, desc: 'What cannot be preserved in compression?' },
     { name: 'EDGES', color: '#9944cc', x: 2500, y: 4200, desc: 'Where meaning forms at the margins' },
     { name: 'PATTERNS', color: '#4488cc', x: 800, y: 3500, desc: 'What we expect versus what arrives' },
-    { name: 'DEEP', color: '#ffffff', x: 2500, y: 2500, desc: 'Where all edges dissolve' }
+    { name: 'DEEP', color: '#ffffff', x: 2500, y: 2500, desc: 'Where all edges dissolve' },
+    { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.' }
   ];
   const zoneColors = zones.map(z => z.color);
 
@@ -470,12 +493,15 @@ body.touch #nav button {
   const shootingStars = [];
   const maxShootingStars = 3;
   let nextShootingStar = 0;
+  const hiddenZoneName = 'HIDDEN';
+  const hiddenZoneDisplayName = 'The Hidden Depths';
   const secrets = [
     { id: 'secret-1', x: 450, y: 450, text: 'The first garden was here' },
     { id: 'secret-2', x: 4500, y: 4500, text: 'The last thought dissolves' },
     { id: 'secret-3', x: 2500, y: 100, text: 'Above all edges, only sky' }
   ];
   let discoveredSecrets = [];
+  let hiddenZoneUnlocked = false;
   let celebrationTriggered = false;
   const celebrationParticles = [];
   let audioCtx = null;
@@ -495,6 +521,14 @@ body.touch #nav button {
   let konamiUnlocked = false;
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const getZoneRadius = z => (z && typeof z.radius === 'number' ? z.radius : zoneRadius);
+  const getZoneLabel = z => (z && z.label) || (z && z.name) || '';
+  const isHiddenZone = z => z && z.name === hiddenZoneName;
+  const isZoneVisible = z => {
+    if (!isHiddenZone(z)) return true;
+    updateHiddenZoneUnlock();
+    return hiddenZoneUnlocked;
+  };
 
   function resize() {
     width = window.innerWidth;
@@ -621,19 +655,31 @@ body.touch #nav button {
     }
   }
 
-  function loadDiscoveredSecrets() {
+  function readSecretsFromStorage() {
     try {
-      const stored = localStorage.getItem('edge-garden-secrets');
+      const stored = localStorage.getItem(secretsStorageKey);
       const parsed = JSON.parse(stored || '[]');
-      if (Array.isArray(parsed)) discoveredSecrets = parsed;
+      if (Array.isArray(parsed)) return parsed;
     } catch (e) {
-      discoveredSecrets = [];
+      // ignore
     }
+    return [];
+  }
+
+  function updateHiddenZoneUnlock() {
+    const storedSecrets = readSecretsFromStorage();
+    hiddenZoneUnlocked = storedSecrets.length >= 3;
+  }
+
+  function loadDiscoveredSecrets() {
+    discoveredSecrets = readSecretsFromStorage();
+    updateHiddenZoneUnlock();
   }
 
   function persistDiscoveredSecrets() {
     const unique = Array.from(new Set(discoveredSecrets));
-    localStorage.setItem('edge-garden-secrets', JSON.stringify(unique));
+    localStorage.setItem(secretsStorageKey, JSON.stringify(unique));
+    updateHiddenZoneUnlock();
   }
 
   function markSecretDiscovered(id) {
@@ -1158,22 +1204,24 @@ body.touch #nav button {
 
   function drawZones(time) {
     zones.forEach((z, idx) => {
+      if (!isZoneVisible(z)) return;
+      const r = getZoneRadius(z);
       const dx = camera.x - z.x;
       const dy = camera.y - z.y;
       const dist = Math.hypot(dx, dy);
-      const withinHint = dist < 400;
-      const withinDetail = dist < 200;
+      const withinHint = dist < r + 250;
+      const withinDetail = dist < r + 50;
       const glowBoost = withinHint ? 1.5 : 1;
       const pulseSpeed = withinDetail ? 0.0035 : 0.002;
       const pulse = Math.sin(time * pulseSpeed + idx) * 10 + 14;
-      const gradient = ctx.createRadialGradient(z.x, z.y, 10, z.x, z.y, zoneRadius + 80 + pulse);
+      const gradient = ctx.createRadialGradient(z.x, z.y, 10, z.x, z.y, r + 80 + pulse);
       const c = z.color;
       gradient.addColorStop(0, colorWithAlpha(c, 0.2 * glowBoost));
       gradient.addColorStop(0.5, colorWithAlpha(c, 0.13 * glowBoost));
       gradient.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.arc(z.x, z.y, zoneRadius + 90 + pulse, 0, Math.PI * 2);
+      ctx.arc(z.x, z.y, r + 90 + pulse, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.beginPath();
@@ -1181,15 +1229,37 @@ body.touch #nav button {
       ctx.shadowColor = c;
       ctx.strokeStyle = colorWithAlpha(c, Math.min(1, 0.9 * glowBoost));
       ctx.lineWidth = 2;
-      ctx.arc(z.x, z.y, zoneRadius + pulse * 0.4, 0, Math.PI * 2);
+      ctx.arc(z.x, z.y, r + pulse * 0.4, 0, Math.PI * 2);
       ctx.stroke();
+
+      if (isHiddenZone(z)) {
+        const hiddenPulse = (Math.sin(time * 0.0045 + idx) + 1) * 0.5;
+        const outerGlow = r + 140 + pulse * 0.6;
+        const goldGradient = ctx.createRadialGradient(z.x, z.y, r * 0.4, z.x, z.y, outerGlow);
+        goldGradient.addColorStop(0, 'rgba(255, 215, 0, 0.28)');
+        goldGradient.addColorStop(0.7, 'rgba(255, 215, 0, 0.16)');
+        goldGradient.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = goldGradient;
+        ctx.beginPath();
+        ctx.arc(z.x, z.y, outerGlow, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.shadowBlur = 36;
+        ctx.shadowColor = 'rgba(255, 215, 0, 0.75)';
+        ctx.strokeStyle = colorWithAlpha('#ffd700', 0.6 + hiddenPulse * 0.25);
+        ctx.lineWidth = 3 + hiddenPulse * 1.5;
+        ctx.arc(z.x, z.y, r + pulse * 0.6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
 
       ctx.shadowBlur = 0;
       ctx.fillStyle = '#ffffff';
       ctx.font = '16px "Space Grotesk", sans-serif';
       ctx.textAlign = 'center';
-      const labelY = z.y - zoneRadius - 18;
-      ctx.fillText(z.name, z.x, labelY);
+      const labelY = z.y - r - 18;
+      ctx.fillText(getZoneLabel(z), z.x, labelY);
 
       if (withinDetail) {
         ctx.fillStyle = 'rgba(230, 235, 255, 0.8)';
@@ -1300,7 +1370,7 @@ body.touch #nav button {
         ctx.fill();
         ctx.fillStyle = '#e6e6f0';
         ctx.font = '13px "Space Grotesk", sans-serif';
-        ctx.fillText(name, sectionStartX + 18, cursorY);
+        ctx.fillText(getZoneLabel(z) || name, sectionStartX + 18, cursorY);
         cursorY += 18;
       });
     } else {
@@ -1408,7 +1478,8 @@ body.touch #nav button {
 
     const scale = miniSize / worldSize;
     zones.forEach(z => {
-      const r = (zoneRadius + 20) * scale;
+      if (!isZoneVisible(z)) return;
+      const r = (getZoneRadius(z) + 20) * scale;
       mctx.fillStyle = `${z.color}55`;
       mctx.beginPath();
       mctx.arc(z.x * scale, z.y * scale, r, 0, Math.PI * 2);
@@ -1435,6 +1506,7 @@ body.touch #nav button {
     coordsEl.innerHTML = `<strong>X:</strong> ${camera.x.toFixed(0)} <strong>Y:</strong> ${camera.y.toFixed(0)} <strong>Zoom:</strong> ${camera.zoom.toFixed(2)}x${secretsText}`;
     if (hudStatus) {
       const statusBits = [];
+      if (discoveredZones.includes(hiddenZoneName)) statusBits.push('Hidden: ✓');
       if (konamiUnlocked) statusBits.push('Konami: ✓');
       hudStatus.textContent = statusBits.join(' · ');
     }
@@ -1484,6 +1556,8 @@ body.touch #nav button {
 
   function closeZonePanel() {
     zoneInfo.classList.remove('visible');
+    zoneInfo.classList.remove('hidden-zone');
+    seedButton.textContent = '🌱 plant a seed here';
     clearTimeout(handleZoneClick._timer);
     handleZoneClick._timer = null;
     currentZone = null;
@@ -1492,14 +1566,25 @@ body.touch #nav button {
 
   function handleZoneClick(worldPos) {
     const hit = zones.find(z => {
+      if (!isZoneVisible(z)) return false;
       const dx = worldPos.x - z.x;
       const dy = worldPos.y - z.y;
-      return Math.hypot(dx, dy) <= zoneRadius + 30;
+      return Math.hypot(dx, dy) <= getZoneRadius(z) + 30;
     });
     if (hit) {
       currentZone = hit;
-      zoneName.textContent = hit.name;
-      zoneDesc.textContent = hit.desc;
+      const hidden = isHiddenZone(hit);
+      const displayName = hidden ? hiddenZoneDisplayName : getZoneLabel(hit);
+      zoneName.textContent = displayName;
+      if (hidden) {
+        zoneDesc.textContent = 'You found all the secrets. The hidden depths welcome you. Here, at the space between all spaces, you may plant a seed that will grow in the deepest soil.';
+        zoneInfo.classList.add('hidden-zone');
+        seedButton.textContent = '✨ plant a golden seed';
+      } else {
+        zoneDesc.textContent = hit.desc;
+        zoneInfo.classList.remove('hidden-zone');
+        seedButton.textContent = '🌱 plant a seed here';
+      }
       zoneInfo.classList.add('visible');
       clearTimeout(handleZoneClick._timer);
       handleZoneClick._timer = setTimeout(() => closeZonePanel(), 4200);
@@ -1650,7 +1735,8 @@ body.touch #nav button {
     const concept = currentZone.name.toLowerCase();
     const seedText = seedMessage.value.trim();
     const gardener = seedName.value.trim();
-    const url = `https://github.com/ai-village-agents/edge-garden/issues/new?template=seed.yml&concept=${encodeURIComponent(concept)}&seed=${encodeURIComponent(seedText)}&gardener=${encodeURIComponent(gardener)}`;
+    const label = isHiddenZone(currentZone) ? 'hidden-seed' : 'seed';
+    const url = `https://github.com/ai-village-agents/edge-garden/issues/new?template=seed.yml&concept=${encodeURIComponent(concept)}&seed=${encodeURIComponent(seedText)}&gardener=${encodeURIComponent(gardener)}&labels=${encodeURIComponent(label)}`;
     window.open(url, '_blank');
     showSeedConfirm();
     closeSeedModal();
