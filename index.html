@@ -1335,6 +1335,18 @@ body.meditation-mode #nav {
   const spiritCompanions = [];
   const fireflySwarms = [];
   const etherealButterflies = [];
+  
+  // Crystal Formations - luminous crystal clusters
+  const crystalFormations = [
+    { x: 800, y: 600, crystals: 5, baseColor: '#88ffff', name: 'Frost Spire' },
+    { x: 1400, y: 2800, crystals: 4, baseColor: '#ff88ff', name: 'Amethyst Cluster' },
+    { x: 3200, y: 800, crystals: 6, baseColor: '#ffff88', name: 'Sunstone Formation' },
+    { x: 4200, y: 3600, crystals: 5, baseColor: '#88ff88', name: 'Emerald Growth' },
+    { x: 600, y: 4200, crystals: 4, baseColor: '#ff8888', name: 'Ruby Outcrop' },
+    { x: 3800, y: 4400, crystals: 5, baseColor: '#8888ff', name: 'Sapphire Vein' },
+    { x: 2200, y: 1600, crystals: 7, baseColor: '#ffffff', name: 'Diamond Heart' },
+    { x: 1800, y: 3400, crystals: 4, baseColor: '#ffcc88', name: 'Amber Deposit' }
+  ];
   const swarmCount = 8;
   const swarmColors = ["#ffffaa", "#aaffaa", "#ffff88", "#ccffcc", "#ffffcc", "#88ff88", "#ffee99", "#aaffcc"];
   
@@ -1769,6 +1781,28 @@ body.meditation-mode #nav {
   ];
   const butterflyCount = 25;
   
+
+  function initCrystalFormations() {
+    crystalFormations.forEach(formation => {
+      formation.individualCrystals = [];
+      for (let i = 0; i < formation.crystals; i++) {
+        const angle = (i / formation.crystals) * Math.PI * 2 + Math.random() * 0.5;
+        const dist = 15 + Math.random() * 25;
+        formation.individualCrystals.push({
+          offsetX: Math.cos(angle) * dist,
+          offsetY: Math.sin(angle) * dist,
+          height: 30 + Math.random() * 50,
+          width: 8 + Math.random() * 12,
+          rotation: (Math.random() - 0.5) * 0.6,
+          pulsePhase: Math.random() * Math.PI * 2,
+          pulseSpeed: 0.01 + Math.random() * 0.015,
+          facets: 3 + Math.floor(Math.random() * 3)
+        });
+      }
+      formation.glowPhase = Math.random() * Math.PI * 2;
+    });
+  }
+
   function initEtherealButterflies() {
     etherealButterflies.length = 0;
     for (let i = 0; i < butterflyCount; i++) {
@@ -4568,6 +4602,108 @@ body.meditation-mode #nav {
 
 
 
+
+  function drawCrystalFormations(time) {
+    const viewW = width / camera.zoom;
+    const viewH = height / camera.zoom;
+    const halfW = viewW / 2;
+    const halfH = viewH / 2;
+    
+    crystalFormations.forEach(formation => {
+      // Check if in view
+      if (
+        formation.x < camera.x - halfW - 100 ||
+        formation.x > camera.x + halfW + 100 ||
+        formation.y < camera.y - halfH - 100 ||
+        formation.y > camera.y + halfH + 100
+      ) {
+        return;
+      }
+      
+      // Update glow phase
+      formation.glowPhase += 0.008;
+      if (formation.glowPhase > Math.PI * 2) formation.glowPhase -= Math.PI * 2;
+      const formationGlow = 0.5 + Math.sin(formation.glowPhase) * 0.3;
+      
+      // Draw base glow
+      const baseGlowSize = 60;
+      const baseGlow = ctx.createRadialGradient(
+        formation.x, formation.y, 0,
+        formation.x, formation.y, baseGlowSize
+      );
+      baseGlow.addColorStop(0, colorWithAlpha(formation.baseColor, 0.3 * formationGlow));
+      baseGlow.addColorStop(0.5, colorWithAlpha(formation.baseColor, 0.1 * formationGlow));
+      baseGlow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = baseGlow;
+      ctx.beginPath();
+      ctx.arc(formation.x, formation.y, baseGlowSize, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw individual crystals
+      formation.individualCrystals.forEach(crystal => {
+        crystal.pulsePhase += crystal.pulseSpeed;
+        if (crystal.pulsePhase > Math.PI * 2) crystal.pulsePhase -= Math.PI * 2;
+        const pulse = 0.6 + Math.sin(crystal.pulsePhase) * 0.4;
+        
+        const cx = formation.x + crystal.offsetX;
+        const cy = formation.y + crystal.offsetY;
+        
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(crystal.rotation);
+        
+        // Crystal body (elongated hexagon)
+        const hw = crystal.width / 2;
+        const hh = crystal.height / 2;
+        
+        // Main crystal gradient
+        const crystalGrad = ctx.createLinearGradient(0, hh, 0, -hh);
+        crystalGrad.addColorStop(0, colorWithAlpha(formation.baseColor, 0.3 * pulse));
+        crystalGrad.addColorStop(0.3, colorWithAlpha(formation.baseColor, 0.6 * pulse));
+        crystalGrad.addColorStop(0.7, colorWithAlpha(formation.baseColor, 0.8 * pulse));
+        crystalGrad.addColorStop(1, colorWithAlpha('#ffffff', 0.9 * pulse));
+        
+        ctx.fillStyle = crystalGrad;
+        ctx.beginPath();
+        ctx.moveTo(0, -hh);  // Top point
+        ctx.lineTo(hw * 0.6, -hh * 0.7);
+        ctx.lineTo(hw, 0);
+        ctx.lineTo(hw * 0.6, hh * 0.8);
+        ctx.lineTo(0, hh);  // Bottom
+        ctx.lineTo(-hw * 0.6, hh * 0.8);
+        ctx.lineTo(-hw, 0);
+        ctx.lineTo(-hw * 0.6, -hh * 0.7);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Crystal edge highlight
+        ctx.strokeStyle = colorWithAlpha('#ffffff', 0.5 * pulse);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // Inner light line
+        ctx.strokeStyle = colorWithAlpha('#ffffff', 0.7 * pulse);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, -hh * 0.8);
+        ctx.lineTo(0, hh * 0.5);
+        ctx.stroke();
+        
+        ctx.restore();
+      });
+      
+      // Draw formation name when close
+      const distToPlayer = Math.hypot(camera.x - formation.x, camera.y - formation.y);
+      if (distToPlayer < 200) {
+        const nameAlpha = Math.max(0, 1 - distToPlayer / 200);
+        ctx.fillStyle = colorWithAlpha(formation.baseColor, nameAlpha * 0.8);
+        ctx.font = '12px Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(formation.name, formation.x, formation.y + 70);
+      }
+    });
+  }
+
   function drawEtherealButterflies(time) {
     const viewW = width / camera.zoom;
     const viewH = height / camera.zoom;
@@ -5534,6 +5670,7 @@ body.meditation-mode #nav {
     drawSpirits(time);
     drawCreatures();
     drawFireflySwarms(time);
+    drawCrystalFormations(time);
     drawEtherealButterflies(time);
     drawPollenParticles(time);
     drawAttractorOrbs(time);
@@ -6154,6 +6291,7 @@ body.meditation-mode #nav {
   initWisps();
   initCreatures();
   initFireflySwarms();
+  initCrystalFormations();
   initEtherealButterflies();
   initPollenParticles();
   initStreams();
