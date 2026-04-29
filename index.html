@@ -1185,6 +1185,13 @@ body.meditation-mode #nav {
             color: '#aaddee',
             memoryResonance: "Stillness is not absence but presence."
         },
+        {
+            name: 'DREAM',
+            x: 4600, y: 4200,
+            radius: 450,
+            color: '#dd88ff',
+            memoryResonance: "Dreams are the garden's truest language."
+        },
     { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.', deeperText: 'You found what was never lost.' }
   ];
   const zoneColors = zones.map(z => z.color);
@@ -1415,6 +1422,7 @@ body.meditation-mode #nav {
   // PLAY zone - bouncy joy bubbles
   const PLAY_ZONE_CENTER = { x: 1000, y: 4800 };
         const STILLNESS_ZONE_CENTER = { x: 200, y: 2400 };
+        const DREAM_ZONE_CENTER = { x: 4600, y: 4200 };
   const joyBubbles = [];
   for (let i = 0; i < 12; i++) {
     joyBubbles.push({
@@ -1492,6 +1500,7 @@ body.meditation-mode #nav {
   // PLAY zone - bouncy joy bubbles
   const PLAY_ZONE_CENTER = { x: 1000, y: 4800 };
         const STILLNESS_ZONE_CENTER = { x: 200, y: 2400 };
+        const DREAM_ZONE_CENTER = { x: 4600, y: 4200 };
   const joyBubbles = [];
   for (let i = 0; i < 12; i++) {
     joyBubbles.push({
@@ -5347,6 +5356,27 @@ body.meditation-mode #nav {
             });
         }
 
+        function updateDreamWisps() {
+            dreamWisps.forEach(wisp => {
+                wisp.phase += 0.015;
+                wisp.morphPhase += 0.02;
+                // Dreamy floating motion
+                wisp.x += Math.sin(wisp.phase) * wisp.drift;
+                wisp.y += Math.cos(wisp.phase * 0.6) * wisp.drift * 0.8;
+                // Slowly shift hue
+                wisp.hue += 0.1;
+                if (wisp.hue > 330) wisp.hue = 270;
+                // Keep within zone
+                const dx = wisp.x - DREAM_ZONE_CENTER.x;
+                const dy = wisp.y - DREAM_ZONE_CENTER.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 400) {
+                    wisp.x -= dx * 0.02;
+                    wisp.y -= dy * 0.02;
+                }
+            });
+        }
+
   function drawJoyBubbles(time) {
     joyBubbles.forEach(bubble => {
       const screenX = (bubble.x - camera.x) * camera.zoom + canvas.width / 2;
@@ -5398,6 +5428,33 @@ body.meditation-mode #nav {
                 ctx.beginPath();
                 ctx.arc(screenX, screenY, mote.size * camera.zoom, 0, Math.PI * 2);
                 ctx.fillStyle = 'rgba(200, 235, 245, ' + mote.alpha + ')';
+                ctx.fill();
+            });
+        }
+
+        function drawDreamWisps() {
+            dreamWisps.forEach(wisp => {
+                const screenX = (wisp.x - camera.x) * camera.zoom + canvas.width / 2;
+                const screenY = (wisp.y - camera.y) * camera.zoom + canvas.height / 2;
+                
+                // Morphing size based on phase
+                const morphSize = wisp.size * (1 + Math.sin(wisp.morphPhase) * 0.3);
+                
+                // Dreamy glow with shifting hue
+                const gradient = ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, morphSize * 4 * camera.zoom);
+                gradient.addColorStop(0, 'hsla(' + wisp.hue + ', 70%, 70%, ' + (wisp.alpha * 0.9) + ')');
+                gradient.addColorStop(0.4, 'hsla(' + wisp.hue + ', 60%, 60%, ' + (wisp.alpha * 0.4) + ')');
+                gradient.addColorStop(1, 'hsla(' + wisp.hue + ', 50%, 50%, 0)');
+                
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, morphSize * 4 * camera.zoom, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                
+                // Bright core
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, morphSize * camera.zoom, 0, Math.PI * 2);
+                ctx.fillStyle = 'hsla(' + wisp.hue + ', 80%, 85%, ' + wisp.alpha + ')';
                 ctx.fill();
             });
         }
@@ -6985,6 +7042,7 @@ body.meditation-mode #nav {
     drawBreathMotes(time);
     drawJoyBubbles(time);
             drawStillnessMotes();
+            drawDreamWisps();
     drawTrail(time);
     drawConstellationLines(time);
     drawStarConnections(time);
@@ -7262,6 +7320,7 @@ body.meditation-mode #nav {
     updateBreathMotes(scaledDt);
     updateJoyBubbles(scaledDt);
             updateStillnessMotes();
+            updateDreamWisps();
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
