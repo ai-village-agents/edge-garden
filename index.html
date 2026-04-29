@@ -1357,6 +1357,7 @@ body.meditation-mode #nav {
   const pollenColors = ["#ffdd66", "#ffcc44", "#ffe488", "#ffd700", "#fff2aa"];
   // Falling Leaves - gentle autumn atmosphere
   const fallingLeaves = [];
+  const windParticles = [];
   const waterReflections = [];
   const dewDrops = [];
   const leafCount = 50;
@@ -1946,6 +1947,21 @@ body.meditation-mode #nav {
         });
       }
     });
+  }
+
+  function initWindParticles() {
+    windParticles.length = 0;
+    for (let i = 0; i < 40; i++) {
+      windParticles.push({
+        x: Math.random() * WORLD_WIDTH,
+        y: Math.random() * WORLD_HEIGHT,
+        length: 20 + Math.random() * 40,
+        alpha: 0.1 + Math.random() * 0.15,
+        speed: 0.8 + Math.random() * 0.4,
+        wobble: Math.random() * Math.PI * 2,
+        wobbleSpeed: 0.02 + Math.random() * 0.02
+      });
+    }
   }
 
   function initStreams() {
@@ -2947,6 +2963,21 @@ body.meditation-mode #nav {
           drop.dripProgress = 0;
         }
       }
+    });
+  }
+
+  function updateWindParticles(dt) {
+    const dtFactor = dt / 16.6667;
+    const worldSize = WORLD_WIDTH;
+    windParticles.forEach(p => {
+      p.wobble += p.wobbleSpeed * dtFactor;
+      const wobbleY = Math.sin(p.wobble) * 5;
+      p.x += wind.x * p.speed * dtFactor * 2;
+      p.y += (wind.y * p.speed * dtFactor * 2) + wobbleY * 0.1;
+      if (p.x < -100) p.x += worldSize + 200;
+      if (p.x > worldSize + 100) p.x -= worldSize + 200;
+      if (p.y < -100) p.y += worldSize + 200;
+      if (p.y > worldSize + 100) p.y -= worldSize + 200;
     });
   }
 
@@ -5130,6 +5161,25 @@ body.meditation-mode #nav {
         ctx.fill();
       }
     });
+
+  function drawWindParticles() {
+    setWorldTransform();
+    windParticles.forEach(p => {
+      const endX = p.x + wind.x * p.length;
+      const endY = p.y + wind.y * p.length;
+      const grad = ctx.createLinearGradient(p.x, p.y, endX, endY);
+      grad.addColorStop(0, colorWithAlpha('#ffffff', 0));
+      grad.addColorStop(0.3, colorWithAlpha('#ccddff', p.alpha * 0.5));
+      grad.addColorStop(0.7, colorWithAlpha('#aaccee', p.alpha));
+      grad.addColorStop(1, colorWithAlpha('#88bbdd', 0));
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(endX, endY);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+  }
   }
   function drawAttractorOrbs(time) {
     const t = time || 0;
@@ -6030,6 +6080,7 @@ body.meditation-mode #nav {
     drawAttractorOrbs(time);
     drawGlowingMushrooms(time);
     drawDewDrops(time);
+    drawWindParticles();
     if (!meditationMode) {
       drawThoughtFragments(time);
       drawEchoes(time);
@@ -6260,6 +6311,7 @@ body.meditation-mode #nav {
     updateFallingLeaves(scaledDt);
     updateWaterReflections(scaledDt, timestamp);
     updateDewDrops(scaledDt, timestamp);
+    updateWindParticles(scaledDt);
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
@@ -6655,6 +6707,7 @@ body.meditation-mode #nav {
   initFallingLeaves();
   initWaterReflections();
   initDewDrops();
+  initWindParticles();
   initStreams();
   initPathways();
   initAttractorOrbs();
