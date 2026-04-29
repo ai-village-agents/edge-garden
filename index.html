@@ -1177,6 +1177,7 @@ body.meditation-mode #nav {
     { name: 'WONDER', x: 1800, y: 3200, color: '#ffdd44', description: 'Where awe takes root', deeper: 'Wonder is not ignorance but attention. The more you see, the more there is to see. Each discovery reveals deeper mysteries.' },
     { name: 'ORIGIN', x: 3200, y: 1600, color: '#ff9933', description: 'Where all begins', deeper: 'Every ending circles back to origin. Every journey starts from the place you never truly left. Return is not regression but recognition.' },
     { name: 'BREATH', x: 4800, y: 2800, color: '#88ddcc', description: 'The pause between', deeper: 'Breath is the oldest rhythm. In the space between inhale and exhale, eternity waits. The garden breathes with you.' },
+    { name: 'PLAY', x: 1000, y: 4800, color: '#ff88aa', description: 'Where joy takes flight', deeper: 'Play is not the absence of purpose but its purest form. Here, meaning dissolves into delight. Every explorer is a child at heart.' },
     { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.', deeperText: 'You found what was never lost.' }
   ];
   const zoneColors = zones.map(z => z.color);
@@ -1403,6 +1404,22 @@ body.meditation-mode #nav {
       size: 2 + Math.random() * 3,
       alpha: 0.4 + Math.random() * 0.4
     });
+
+  // PLAY zone - bouncy joy bubbles
+  const PLAY_ZONE_CENTER = { x: 1000, y: 4800 };
+  const joyBubbles = [];
+  for (let i = 0; i < 12; i++) {
+    joyBubbles.push({
+      x: PLAY_ZONE_CENTER.x + (Math.random() - 0.5) * 350,
+      y: PLAY_ZONE_CENTER.y + (Math.random() - 0.5) * 350,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: -0.2 - Math.random() * 0.3,
+      size: 6 + Math.random() * 10,
+      wobble: Math.random() * Math.PI * 2,
+      wobbleSpeed: 0.003 + Math.random() * 0.002,
+      hue: 330 + Math.random() * 40
+    });
+  }
   }
   const MEMORY_ZONE_RADIUS = 400;
   function initMemoryWisps() {
@@ -1463,6 +1480,22 @@ body.meditation-mode #nav {
       driftY: (Math.random() - 0.5) * 0.3,
       alpha: 0.4 + Math.random() * 0.4
     });
+
+  // PLAY zone - bouncy joy bubbles
+  const PLAY_ZONE_CENTER = { x: 1000, y: 4800 };
+  const joyBubbles = [];
+  for (let i = 0; i < 12; i++) {
+    joyBubbles.push({
+      x: PLAY_ZONE_CENTER.x + (Math.random() - 0.5) * 350,
+      y: PLAY_ZONE_CENTER.y + (Math.random() - 0.5) * 350,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: -0.2 - Math.random() * 0.3,
+      size: 6 + Math.random() * 10,
+      wobble: Math.random() * Math.PI * 2,
+      wobbleSpeed: 0.003 + Math.random() * 0.002,
+      hue: 330 + Math.random() * 40
+    });
+  }
   }
   }
   }
@@ -5242,6 +5275,53 @@ body.meditation-mode #nav {
     });
   }
 
+  function updateJoyBubbles(dt) {
+    joyBubbles.forEach(bubble => {
+      bubble.wobble += bubble.wobbleSpeed * dt;
+      bubble.x += bubble.vx * dt * 0.02 + Math.sin(bubble.wobble) * 0.3;
+      bubble.y += bubble.vy * dt * 0.02;
+      
+      // Reset when floating too high
+      if (bubble.y < PLAY_ZONE_CENTER.y - 200) {
+        bubble.y = PLAY_ZONE_CENTER.y + 180;
+        bubble.x = PLAY_ZONE_CENTER.x + (Math.random() - 0.5) * 350;
+      }
+      // Bounce off horizontal edges
+      if (Math.abs(bubble.x - PLAY_ZONE_CENTER.x) > 180) bubble.vx *= -1;
+    });
+  }
+
+  function drawJoyBubbles(time) {
+    joyBubbles.forEach(bubble => {
+      const screenX = (bubble.x - camera.x) * camera.zoom + canvas.width / 2;
+      const screenY = (bubble.y - camera.y) * camera.zoom + canvas.height / 2;
+      if (screenX < -50 || screenX > canvas.width + 50 || screenY < -50 || screenY > canvas.height + 50) return;
+      
+      const wobbleScale = 0.9 + 0.1 * Math.sin(bubble.wobble * 2);
+      const size = bubble.size * wobbleScale * camera.zoom;
+      
+      ctx.save();
+      
+      // Bubble with highlight
+      const gradient = ctx.createRadialGradient(screenX - size * 0.3, screenY - size * 0.3, 0, screenX, screenY, size);
+      gradient.addColorStop(0, "hsla(" + bubble.hue + ", 80%, 85%, 0.9)");
+      gradient.addColorStop(0.7, "hsla(" + bubble.hue + ", 70%, 70%, 0.6)");
+      gradient.addColorStop(1, "hsla(" + bubble.hue + ", 60%, 60%, 0.3)");
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, size, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Shine highlight
+      ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+      ctx.beginPath();
+      ctx.arc(screenX - size * 0.35, screenY - size * 0.35, size * 0.25, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.restore();
+    });
+  }
+
   function drawGuideSpirits(time) {
     guideSpirits.forEach(spirit => {
       const dx = spirit.x - camera.x;
@@ -6823,6 +6903,7 @@ body.meditation-mode #nav {
     drawOriginSeeds(time);
     drawPrimordialPulses(time);
     drawBreathMotes(time);
+    drawJoyBubbles(time);
     drawTrail(time);
     drawConstellationLines(time);
     drawStarConnections(time);
@@ -7098,6 +7179,7 @@ body.meditation-mode #nav {
     updateOriginSeeds(scaledDt);
     updatePrimordialPulses(scaledDt);
     updateBreathMotes(scaledDt);
+    updateJoyBubbles(scaledDt);
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
