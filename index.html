@@ -1167,6 +1167,7 @@ body.meditation-mode #nav {
     { name: 'RESONANCE', color: '#44ccaa', x: 4200, y: 2200, desc: 'Where echoes find their source', deeperText: 'Every thought leaves ripples. Here, they return.' },
     { name: 'DEEP', color: '#ffffff', x: 2500, y: 2500, desc: 'Where all edges dissolve', deeperText: 'In the dissolution of all edges, something waits.' },
     { name: 'WHISPERS', color: '#aabbcc', x: 1500, y: 1800, desc: 'Where unspoken thoughts gather', deeperText: 'The words you almost said still resonate here, shaping silence into meaning.' },
+    { name: 'ECHO', x: 3800, y: 800, color: '#cc99ff', description: 'Where sounds return transformed', deeper: 'What you send out comes back changed. The echo knows things the original voice forgot.' },
     { name: 'REFLECTION', x: 1200, y: 4400, color: '#88ddff', description: 'Where the self meets the self', deeper: 'Every surface holds a mirror. In reflection, we see not what is, but what we bring to the seeing.' },
     { name: 'DRIFT', x: 600, y: 1200, color: '#99ccff', description: 'Where thoughts float untethered', deeper: 'In the drift, nothing is fixed. Identity becomes a question, and questions become paths. Let go.' },
     { name: 'THRESHOLD', color: '#ff99cc', x: 4600, y: 1000, desc: 'The moment before change', deeperText: 'Every ending holds its beginning. Here, in the breath between states, all possibilities hover.' },
@@ -1356,6 +1357,11 @@ body.meditation-mode #nav {
   // Reflection Ripples - expanding rings in the REFLECTION zone
   // Shooting Stars - occasional streaks across the sky
   let lastShootingStar = 0;
+
+  // Movement Echo Whispers - fading text that appears as player moves
+  const movementEchoes = [];
+  let lastEchoTime = 0;
+  const echoWords = ["here", "was", "now", "then", "gone", "stay", "pass", "trace", "mark", "fade"];
   const SHOOTING_STAR_INTERVAL = 8000; // New star every 8 seconds average
 
   const reflectionRipples = [
@@ -2702,6 +2708,7 @@ body.meditation-mode #nav {
       camera.x += (mx / len) * speed;
       camera.y += (my / len) * speed;
     }
+      spawnMovementEcho(camera.x, camera.y);
     camera.x = clamp(camera.x, 0, worldSize);
     camera.y = clamp(camera.y, 0, worldSize);
     return Math.hypot(camera.x - prevX, camera.y - prevY);
@@ -4662,6 +4669,46 @@ body.meditation-mode #nav {
 
   function drawWisps() {
     ctx.shadowBlur = 16;
+
+  function spawnMovementEcho(x, y) {
+    const now = Date.now();
+    if (now - lastEchoTime > 800 && movementEchoes.length < 8) {
+      lastEchoTime = now;
+      movementEchoes.push({
+        x: x + (Math.random() - 0.5) * 100,
+        y: y + (Math.random() - 0.5) * 100,
+        text: echoWords[Math.floor(Math.random() * echoWords.length)],
+        alpha: 0.6,
+        vy: -0.3,
+        life: 80
+      });
+    }
+  }
+
+  function updateMovementEchoes() {
+    for (let i = movementEchoes.length - 1; i >= 0; i--) {
+      const echo = movementEchoes[i];
+      echo.y += echo.vy;
+      echo.life--;
+      echo.alpha = (echo.life / 80) * 0.6;
+      if (echo.life <= 0) movementEchoes.splice(i, 1);
+    }
+  }
+
+  function drawMovementEchoes() {
+    movementEchoes.forEach(echo => {
+      const screenX = (echo.x - camera.x) * camera.zoom + canvas.width / 2;
+      const screenY = (echo.y - camera.y) * camera.zoom + canvas.height / 2;
+      ctx.save();
+      ctx.globalAlpha = echo.alpha;
+      ctx.font = (14 * camera.zoom) + 'px Georgia, serif';
+      ctx.fillStyle = '#cc99ff';
+      ctx.shadowColor = '#9966cc';
+      ctx.shadowBlur = 8;
+      ctx.fillText(echo.text, screenX, screenY);
+      ctx.restore();
+    });
+  }
     wisps.forEach(w => {
       const rgbColor = colorWithAlpha(w.color, w.alpha);
       w.trail.forEach((p, idx) => {
@@ -6197,6 +6244,7 @@ body.meditation-mode #nav {
     drawStreams(time);
     drawWaterReflections(time);
     drawShootingStars();
+    drawMovementEchoes();
     drawTrail(time);
     drawConstellationLines(time);
     drawStarConnections(time);
@@ -6462,6 +6510,7 @@ body.meditation-mode #nav {
     updateThoughtBubbles();
     updateReflectionRipples();
     updateShootingStars(Date.now());
+    updateMovementEchoes();
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
