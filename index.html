@@ -1336,6 +1336,11 @@ body.meditation-mode #nav {
   const fireflySwarms = [];
   const swarmCount = 8;
   const swarmColors = ["#ffffaa", "#aaffaa", "#ffff88", "#ccffcc", "#ffffcc", "#88ff88", "#ffee99", "#aaffcc"];
+  
+  // Drifting Pollen - golden particles floating on wind
+  const pollenParticles = [];
+  const pollenCount = 80;
+  const pollenColors = ["#ffdd66", "#ffcc44", "#ffe488", "#ffd700", "#fff2aa"];
   const MAX_SPIRITS = 3;
   let nextSpiritSpawn = 0;
   const spiritColors = ['#f5e3ff', '#dff4ff', '#e7ffe4', '#fff2df', '#e3f0ff', '#ffe8f5'];
@@ -1723,6 +1728,7 @@ body.meditation-mode #nav {
       });
     }
 
+  }
   function initFireflySwarms() {
     fireflySwarms.length = 0;
     for (let i = 0; i < swarmCount; i++) {
@@ -1752,6 +1758,22 @@ body.meditation-mode #nav {
       });
     }
   }
+
+  function initPollenParticles() {
+    pollenParticles.length = 0;
+    for (let i = 0; i < pollenCount; i++) {
+      pollenParticles.push({
+        x: Math.random() * worldSize,
+        y: Math.random() * worldSize,
+        size: 1.5 + Math.random() * 2,
+        color: pollenColors[Math.floor(Math.random() * pollenColors.length)],
+        wobblePhase: Math.random() * Math.PI * 2,
+        wobbleSpeed: 0.02 + Math.random() * 0.02,
+        wobbleAmp: 0.3 + Math.random() * 0.4,
+        opacity: 0.3 + Math.random() * 0.4,
+        drift: 0.1 + Math.random() * 0.15
+      });
+    }
   }
 
   function initStreams() {
@@ -2632,6 +2654,25 @@ body.meditation-mode #nav {
         f.orbitPhase += f.orbitSpeed * dtFactor;
         if (f.orbitPhase > Math.PI * 2) f.orbitPhase -= Math.PI * 2;
       });
+    });
+  }
+
+  function updatePollenParticles(dt) {
+    const dtFactor = dt / 16.6667;
+    pollenParticles.forEach(p => {
+      // Move with wind
+      p.x += (wind.x * 0.8 + p.drift) * dtFactor;
+      p.y += (wind.y * 0.8 + Math.sin(p.wobblePhase) * p.wobbleAmp) * dtFactor;
+      
+      // Wobble animation
+      p.wobblePhase += p.wobbleSpeed * dtFactor;
+      if (p.wobblePhase > Math.PI * 2) p.wobblePhase -= Math.PI * 2;
+      
+      // Wrap around world
+      if (p.x < 0) p.x += worldSize;
+      if (p.x > worldSize) p.x -= worldSize;
+      if (p.y < 0) p.y += worldSize;
+      if (p.y > worldSize) p.y -= worldSize;
     });
   }
 
@@ -4453,6 +4494,44 @@ body.meditation-mode #nav {
     });
   }
 
+
+  function drawPollenParticles(time) {
+    const viewW = width / camera.zoom;
+    const viewH = height / camera.zoom;
+    const halfW = viewW / 2;
+    const halfH = viewH / 2;
+    
+    pollenParticles.forEach(p => {
+      // Check if in view
+      if (
+        p.x < camera.x - halfW - 20 ||
+        p.x > camera.x + halfW + 20 ||
+        p.y < camera.y - halfH - 20 ||
+        p.y > camera.y + halfH + 20
+      ) {
+        return;
+      }
+      
+      // Slight twinkle effect
+      const twinkle = 0.7 + Math.sin(time * 0.003 + p.wobblePhase) * 0.3;
+      
+      // Draw glow
+      const glowSize = p.size * 3;
+      const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowSize);
+      glow.addColorStop(0, colorWithAlpha(p.color, p.opacity * twinkle * 0.6));
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, glowSize, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Draw core
+      ctx.fillStyle = colorWithAlpha(p.color, p.opacity * twinkle);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
   function drawAttractorOrbs(time) {
     const t = time || 0;
     const prevComposite = ctx.globalCompositeOperation;
@@ -5295,6 +5374,7 @@ body.meditation-mode #nav {
     drawSpirits(time);
     drawCreatures();
     drawFireflySwarms(time);
+    drawPollenParticles(time);
     drawAttractorOrbs(time);
     drawGlowingMushrooms(time);
     if (!meditationMode) {
@@ -5522,6 +5602,7 @@ body.meditation-mode #nav {
     updateWisps(scaledDt);
     updateCreatures(scaledDt);
     updateFireflySwarms(scaledDt);
+    updatePollenParticles(scaledDt);
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
@@ -5911,6 +5992,7 @@ body.meditation-mode #nav {
   initWisps();
   initCreatures();
   initFireflySwarms();
+  initPollenParticles();
   initStreams();
   initPathways();
   initAttractorOrbs();
