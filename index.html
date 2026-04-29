@@ -2947,7 +2947,7 @@ body.meditation-mode #nav {
   }
 
   function updateDewDrops(dt, time) {
-    const isMorning = currentTimeOfDay === 'morning';
+    const isMorning = timeOfDay === 'morning';
     dewDrops.forEach(drop => {
       drop.shimmerPhase += drop.shimmerSpeed * dt;
       drop.dripTimer += dt;
@@ -5133,7 +5133,7 @@ body.meditation-mode #nav {
   function drawDewDrops(time) {
     setWorldTransform();
     const now = time || 0;
-    const isMorning = currentTimeOfDay === 'morning';
+    const isMorning = timeOfDay === 'morning';
     const baseAlpha = isMorning ? 0.9 : 0.4;
     dewDrops.forEach(drop => {
       const mushroom = glowingMushrooms[drop.mushroomIdx];
