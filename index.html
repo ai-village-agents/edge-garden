@@ -1354,6 +1354,10 @@ body.meditation-mode #nav {
 
   // Floating Thought Bubbles - ethereal text that drifts across the world
   // Reflection Ripples - expanding rings in the REFLECTION zone
+  // Shooting Stars - occasional streaks across the sky
+  let lastShootingStar = 0;
+  const SHOOTING_STAR_INTERVAL = 8000; // New star every 8 seconds average
+
   const reflectionRipples = [
     { x: 1200, y: 4400, radius: 0, maxRadius: 150, speed: 0.5, alpha: 0 },
     { x: 1100, y: 4500, radius: 0, maxRadius: 120, speed: 0.4, alpha: 0 },
@@ -5270,6 +5274,57 @@ body.meditation-mode #nav {
         ctx.stroke();
       }
     });
+
+  function updateShootingStars(now) {
+    // Spawn new shooting star occasionally
+    if (now - lastShootingStar > SHOOTING_STAR_INTERVAL + Math.random() * 4000) {
+      lastShootingStar = now;
+      const startX = Math.random() * worldSize;
+      const startY = Math.random() * worldSize * 0.5; // Upper half
+      const angle = Math.PI / 4 + Math.random() * Math.PI / 4; // Diagonal down
+      shootingStars.push({
+        x: startX,
+        y: startY,
+        vx: Math.cos(angle) * 15,
+        vy: Math.sin(angle) * 15,
+        length: 80 + Math.random() * 60,
+        alpha: 1,
+        life: 60 + Math.random() * 40
+      });
+    }
+    // Update existing stars
+    for (let i = shootingStars.length - 1; i >= 0; i--) {
+      const star = shootingStars[i];
+      star.x += star.vx;
+      star.y += star.vy;
+      star.life--;
+      star.alpha = star.life / 100;
+      if (star.life <= 0) shootingStars.splice(i, 1);
+    }
+  }
+
+  function drawShootingStars() {
+    setWorldTransform();
+    shootingStars.forEach(star => {
+      const tailX = star.x - (star.vx / 15) * star.length;
+      const tailY = star.y - (star.vy / 15) * star.length;
+      const grad = ctx.createLinearGradient(tailX, tailY, star.x, star.y);
+      grad.addColorStop(0, colorWithAlpha("#ffffff", 0));
+      grad.addColorStop(0.7, colorWithAlpha("#aaddff", star.alpha * 0.5));
+      grad.addColorStop(1, colorWithAlpha("#ffffff", star.alpha));
+      ctx.beginPath();
+      ctx.moveTo(tailX, tailY);
+      ctx.lineTo(star.x, star.y);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Bright head
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = colorWithAlpha("#ffffff", star.alpha);
+      ctx.fill();
+    });
+  }
   }
     const t = time || 0;
     const prevComposite = ctx.globalCompositeOperation;
@@ -6172,6 +6227,7 @@ body.meditation-mode #nav {
     drawWindParticles();
     drawThoughtBubbles();
     drawReflectionRipples();
+    drawShootingStars();
     if (!meditationMode) {
       drawThoughtFragments(time);
       drawEchoes(time);
@@ -6405,6 +6461,7 @@ body.meditation-mode #nav {
     updateWindParticles(scaledDt);
     updateThoughtBubbles();
     updateReflectionRipples();
+    updateShootingStars(Date.now());
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
