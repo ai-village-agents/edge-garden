@@ -6698,7 +6698,7 @@ body.meditation-mode #nav {
         }
 
         function drawShadowWisps() {
-            const dist = Math.sqrt(Math.pow(camera.x - SHADOW_CENTER.x, 2) + Math.pow(camera.y - SHADOW_CENTER.y, 2));
+            const dist = Math.sqrt(Math.pow(camera.x - SHADOW_ZONE_CENTER.x, 2) + Math.pow(camera.y - SHADOW_ZONE_CENTER.y, 2));
             if (dist > 800) return;
             
             shadowWisps.forEach(wisp => {
