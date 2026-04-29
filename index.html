@@ -1241,6 +1241,13 @@ body.meditation-mode #nav {
             color: '#8855cc',
             memoryResonance: "Mystery is not the absence of answers but the presence of infinite possibility."
         },
+        {
+            name: 'COURAGE',
+            x: 3000, y: 600,
+            radius: 420,
+            color: '#dd6644',
+            memoryResonance: "Courage is not the absence of fear but the decision that something else matters more."
+        },
     { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.', deeperText: 'You found what was never lost.' }
   ];
   const zoneColors = zones.map(z => z.color);
@@ -1479,6 +1486,7 @@ body.meditation-mode #nav {
         const TIME_ZONE_CENTER = { x: 1600, y: 600 };
         const HOPE_ZONE_CENTER = { x: 3400, y: 2800 };
         const MYSTERY_ZONE_CENTER = { x: 2000, y: 1000 };
+        const COURAGE_ZONE_CENTER = { x: 3000, y: 600 };
   const joyBubbles = [];
   for (let i = 0; i < 12; i++) {
     joyBubbles.push({
@@ -1520,6 +1528,7 @@ body.meditation-mode #nav {
   const timeFragments = [];
   const hopeEmbers = [];
     const mysteryOrbs = [];
+    const courageFlames = [];
   for (let i = 0; i < 10; i++) {
     originSeeds.push({
       x: ORIGIN_ZONE_CENTER.x + (Math.random() - 0.5) * 300,
@@ -1603,6 +1612,7 @@ body.meditation-mode #nav {
   initTimeFragments();
   initHopeEmbers();
   initMysteryOrbs();
+        initCourageFlames();
   const echoWords = ["here", "was", "now", "then", "gone", "stay", "pass", "trace", "mark", "fade"];
   const SHOOTING_STAR_INTERVAL = 8000; // New star every 8 seconds average
 
@@ -5801,6 +5811,22 @@ body.meditation-mode #nav {
             }
         }
 
+        function initCourageFlames() {
+            for (let i = 0; i < 16; i++) {
+                const angle = (i / 16) * Math.PI * 2;
+                courageFlames.push({
+                    x: COURAGE_ZONE_CENTER.x + (Math.random() - 0.5) * 300,
+                    y: COURAGE_ZONE_CENTER.y + (Math.random() - 0.5) * 300,
+                    baseY: COURAGE_ZONE_CENTER.y + 150,
+                    size: Math.random() * 10 + 5,
+                    speed: Math.random() * 1.2 + 0.6,
+                    flicker: Math.random() * Math.PI * 2,
+                    flickerSpeed: Math.random() * 0.1 + 0.05,
+                    intensity: Math.random() * 0.4 + 0.6
+                });
+            }
+        }
+
         function updateShadowWisps() {
             shadowWisps.forEach(wisp => {
                 wisp.angle += wisp.speed * 0.02;
@@ -5860,6 +5886,23 @@ body.meditation-mode #nav {
                 // Slowly shift hue
                 orb.hue += 0.1;
                 if (orb.hue > 300) orb.hue = 240;
+            });
+        }
+
+        function updateCourageFlames() {
+            courageFlames.forEach(flame => {
+                flame.y -= flame.speed;
+                flame.flicker += flame.flickerSpeed;
+                
+                // Flickering sideways movement
+                flame.x += Math.sin(flame.flicker) * 0.8;
+                
+                // Reset when risen too high
+                if (flame.y < COURAGE_ZONE_CENTER.y - 200) {
+                    flame.y = flame.baseY;
+                    flame.x = COURAGE_ZONE_CENTER.x + (Math.random() - 0.5) * 300;
+                    flame.intensity = Math.random() * 0.4 + 0.6;
+                }
             });
         }
 
@@ -6173,6 +6216,37 @@ body.meditation-mode #nav {
                 ctx.beginPath();
                 ctx.fillStyle = `hsla(${orb.hue}, 80%, 80%, ${pulse})`;
                 ctx.arc(screenX, screenY, size * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawCourageFlames() {
+            const dist = Math.sqrt(Math.pow(camera.x - COURAGE_ZONE_CENTER.x, 2) + Math.pow(camera.y - COURAGE_ZONE_CENTER.y, 2));
+            if (dist > 800) return;
+            
+            courageFlames.forEach(flame => {
+                const screenX = (flame.x - camera.x) * camera.zoom + canvas.width / 2;
+                const screenY = (flame.y - camera.y) * camera.zoom + canvas.height / 2;
+                
+                const flicker = Math.sin(flame.flicker) * 0.2 + 0.8;
+                const size = flame.size * flicker * camera.zoom;
+                
+                // Flame gradient - warm oranges and reds
+                const gradient = ctx.createRadialGradient(screenX, screenY - size, 0, screenX, screenY, size * 2.5);
+                gradient.addColorStop(0, `rgba(255, 220, 100, ${flame.intensity * flicker})`);
+                gradient.addColorStop(0.3, `rgba(255, 150, 50, ${flame.intensity * flicker * 0.8})`);
+                gradient.addColorStop(0.6, `rgba(220, 80, 30, ${flame.intensity * flicker * 0.5})`);
+                gradient.addColorStop(1, 'rgba(180, 40, 20, 0)');
+                
+                ctx.beginPath();
+                ctx.fillStyle = gradient;
+                ctx.arc(screenX, screenY, size * 2.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Bright core
+                ctx.beginPath();
+                ctx.fillStyle = `rgba(255, 255, 200, ${flame.intensity * flicker})`;
+                ctx.arc(screenX, screenY - size * 0.3, size * 0.4, 0, Math.PI * 2);
                 ctx.fill();
             });
         }
@@ -7768,6 +7842,7 @@ body.meditation-mode #nav {
             drawTimeFragments();
             drawHopeEmbers();
             drawMysteryOrbs();
+            drawCourageFlames();
     drawTrail(time);
     drawConstellationLines(time);
     drawStarConnections(time);
@@ -8053,6 +8128,7 @@ body.meditation-mode #nav {
             updateTimeFragments();
             updateHopeEmbers();
             updateMysteryOrbs();
+            updateCourageFlames();
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
