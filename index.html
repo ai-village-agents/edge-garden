@@ -1269,6 +1269,13 @@ body.meditation-mode #nav {
             color: '#cc77aa',
             resonance: 'Change is the only constant, and constancy its only shape.'
         },
+        {
+            name: 'WISDOM',
+            x: 200, y: 1600,
+            radius: 300,
+            color: '#aa88ff',
+            resonance: 'Wisdom is knowing what to do with what you know.'
+        },
     { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.', deeperText: 'You found what was never lost.' }
   ];
   const zoneColors = zones.map(z => z.color);
@@ -1511,6 +1518,7 @@ body.meditation-mode #nav {
         const CONNECTION_ZONE_CENTER = { x: 4200, y: 1400 };
         const TRUTH_ZONE_CENTER = { x: 600, y: 4600 };
         const CHANGE_ZONE_CENTER = { x: 4600, y: 600 };
+        const WISDOM_ZONE_CENTER = { x: 200, y: 1600 };
   const joyBubbles = [];
   for (let i = 0; i < 12; i++) {
     joyBubbles.push({
@@ -1556,6 +1564,7 @@ body.meditation-mode #nav {
     const connectionLinks = [];
     const truthCrystals = [];
     const changeParticles = [];
+    const wisdomOrbs = [];
   for (let i = 0; i < 10; i++) {
     originSeeds.push({
       x: ORIGIN_ZONE_CENTER.x + (Math.random() - 0.5) * 300,
@@ -1643,6 +1652,7 @@ body.meditation-mode #nav {
         initConnectionLinks();
         initTruthCrystals();
         initChangeParticles();
+        initWisdomOrbs();
   const echoWords = ["here", "was", "now", "then", "gone", "stay", "pass", "trace", "mark", "fade"];
   const SHOOTING_STAR_INTERVAL = 8000; // New star every 8 seconds average
 
@@ -6027,6 +6037,25 @@ body.meditation-mode #nav {
             }
         }
 
+        function initWisdomOrbs() {
+            for (let i = 0; i < 12; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.random() * 260;
+                const size = 10 + Math.random() * 10;
+                wisdomOrbs.push({
+                    x: WISDOM_ZONE_CENTER.x + Math.cos(angle) * dist,
+                    y: WISDOM_ZONE_CENTER.y + Math.sin(angle) * dist,
+                    size,
+                    pulse: Math.random() * Math.PI * 2,
+                    glowIntensity: 0.6 + Math.random() * 0.4,
+                    floatPhase: Math.random() * Math.PI * 2,
+                    orbitalAngle: angle,
+                    orbitalSpeed: 0.005 + Math.random() * 0.01,
+                    orbitalRadius: dist
+                });
+            }
+        }
+
         function updateShadowWisps() {
             shadowWisps.forEach(wisp => {
                 wisp.angle += wisp.speed * 0.02;
@@ -6125,6 +6154,19 @@ body.meditation-mode #nav {
                 particle.rotation += 0.02;
                 particle.phase += particle.morphSpeed;
                 particle.colorPhase += 0.01;
+            });
+        }
+
+        function updateWisdomOrbs() {
+            wisdomOrbs.forEach(orb => {
+                orb.pulse += 0.03;
+                orb.floatPhase += 0.02;
+                orb.orbitalAngle += orb.orbitalSpeed;
+
+                const radius = typeof orb.orbitalRadius === 'number' ? orb.orbitalRadius : Math.max(20, Math.hypot(orb.x - WISDOM_ZONE_CENTER.x, orb.y - WISDOM_ZONE_CENTER.y));
+                const bob = Math.sin(orb.floatPhase) * 8;
+                orb.x = WISDOM_ZONE_CENTER.x + Math.cos(orb.orbitalAngle) * radius;
+                orb.y = WISDOM_ZONE_CENTER.y + Math.sin(orb.orbitalAngle) * radius + bob;
             });
         }
 
@@ -6586,6 +6628,42 @@ body.meditation-mode #nav {
                 drawPoly(shapes[nextIndex], t);
 
                 ctx.shadowBlur = 0;
+                ctx.restore();
+            });
+        }
+
+        function drawWisdomOrbs(time) {
+            const dist = Math.sqrt(Math.pow(camera.x - WISDOM_ZONE_CENTER.x, 2) + Math.pow(camera.y - WISDOM_ZONE_CENTER.y, 2));
+            if (dist > 900) return;
+
+            wisdomOrbs.forEach(orb => {
+                const screenX = (orb.x - camera.x) * camera.zoom + canvas.width / 2;
+                const screenY = (orb.y - camera.y) * camera.zoom + canvas.height / 2;
+                const pulse = 0.7 + Math.sin(orb.pulse) * 0.3;
+                const baseSize = (orb.size + Math.sin(orb.floatPhase) * 2) * camera.zoom;
+                const glow = orb.glowIntensity * pulse;
+
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+
+                const layers = [
+                    { scale: 2.4, alpha: 0.12 * glow },
+                    { scale: 1.6, alpha: 0.18 * glow },
+                    { scale: 1.0, alpha: 0.32 * glow }
+                ];
+
+                layers.forEach(layer => {
+                    ctx.beginPath();
+                    ctx.fillStyle = `rgba(170, 136, 255, ${layer.alpha})`;
+                    ctx.arc(screenX, screenY, baseSize * layer.scale, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                ctx.beginPath();
+                ctx.fillStyle = `rgba(170, 136, 255, ${0.45 * glow})`;
+                ctx.arc(screenX, screenY, baseSize * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+
                 ctx.restore();
             });
         }
@@ -8184,6 +8262,7 @@ body.meditation-mode #nav {
             drawConnectionLinks();
             drawTruthCrystals();
             drawChangeParticles();
+            drawWisdomOrbs(time);
     drawTrail(time);
     drawConstellationLines(time);
     drawStarConnections(time);
@@ -8473,6 +8552,7 @@ body.meditation-mode #nav {
             updateConnectionLinks();
             updateTruthCrystals();
             updateChangeParticles();
+            updateWisdomOrbs();
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
