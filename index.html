@@ -1417,6 +1417,26 @@ body.meditation-mode #nav {
     { id: 'ruin-5', x: 1100, y: 600, inscription: 'Between moments, eternity waits', discovered: false },
     { id: 'ruin-6', x: 3900, y: 4100, inscription: 'The unobserved still exists', discovered: false }
   ];
+  const glowingVines = [
+    // Vines on ruin-1 (700, 2800)
+    { ruinId: "ruin-1", segments: [{x:680,y:2780},{x:660,y:2750},{x:670,y:2720},{x:690,y:2690},{x:720,y:2670}], color: "#44ff88", glowPhase: 0 },
+    { ruinId: "ruin-1", segments: [{x:720,y:2820},{x:750,y:2840},{x:780,y:2830},{x:800,y:2800}], color: "#66ffaa", glowPhase: 1.5 },
+    // Vines on ruin-2 (3300, 1500)
+    { ruinId: "ruin-2", segments: [{x:3280,y:1480},{x:3260,y:1450},{x:3270,y:1420},{x:3290,y:1390},{x:3320,y:1370}], color: "#44ff88", glowPhase: 0.5 },
+    { ruinId: "ruin-2", segments: [{x:3320,y:1520},{x:3350,y:1540},{x:3370,y:1530},{x:3390,y:1500}], color: "#88ffcc", glowPhase: 2.0 },
+    // Vines on ruin-3 (1800, 3800)
+    { ruinId: "ruin-3", segments: [{x:1780,y:3780},{x:1760,y:3750},{x:1770,y:3720},{x:1790,y:3690}], color: "#66ff99", glowPhase: 1.0 },
+    { ruinId: "ruin-3", segments: [{x:1820,y:3820},{x:1850,y:3840},{x:1870,y:3820},{x:1880,y:3790}], color: "#44ffaa", glowPhase: 2.5 },
+    // Vines on ruin-4 (4100, 2900)
+    { ruinId: "ruin-4", segments: [{x:4080,y:2880},{x:4060,y:2850},{x:4070,y:2820},{x:4090,y:2800}], color: "#55ff99", glowPhase: 0.8 },
+    { ruinId: "ruin-4", segments: [{x:4120,y:2920},{x:4150,y:2940},{x:4170,y:2920},{x:4180,y:2890}], color: "#77ffbb", glowPhase: 1.8 },
+    // Vines on ruin-5 (1100, 600)
+    { ruinId: "ruin-5", segments: [{x:1080,y:580},{x:1060,y:550},{x:1070,y:520},{x:1090,y:500},{x:1120,y:490}], color: "#44ff88", glowPhase: 0.3 },
+    { ruinId: "ruin-5", segments: [{x:1120,y:620},{x:1150,y:640},{x:1170,y:620},{x:1180,y:590}], color: "#66ffcc", glowPhase: 2.2 },
+    // Vines on ruin-6 (3900, 4100)
+    { ruinId: "ruin-6", segments: [{x:3880,y:4080},{x:3860,y:4050},{x:3870,y:4020},{x:3890,y:4000}], color: "#55ffaa", glowPhase: 1.2 },
+    { ruinId: "ruin-6", segments: [{x:3920,y:4120},{x:3950,y:4140},{x:3970,y:4120},{x:3980,y:4090}], color: "#44ff99", glowPhase: 2.8 }
+  ];
   const secrets = [
     { id: 'secret-1', x: 450, y: 450, text: 'The first garden was here' },
     { id: 'secret-2', x: 4500, y: 4500, text: 'The last thought dissolves' },
@@ -5467,6 +5487,53 @@ body.meditation-mode #nav {
     });
   }
 
+  function drawGlowingVines(time) {
+    const t = time || 0;
+    glowingVines.forEach(vine => {
+      const segments = vine.segments;
+      if (segments.length < 2) return;
+      const glowIntensity = 0.4 + Math.sin(t * 0.003 + vine.glowPhase) * 0.3;
+      const pulseWidth = 2 + Math.sin(t * 0.002 + vine.glowPhase) * 1;
+      // Draw glow layer
+      ctx.save();
+      ctx.shadowBlur = 15 + glowIntensity * 10;
+      ctx.shadowColor = vine.color;
+      ctx.strokeStyle = vine.color;
+      ctx.lineWidth = pulseWidth + 2;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.globalAlpha = glowIntensity * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(segments[0].x, segments[0].y);
+      for (let i = 1; i < segments.length; i++) {
+        const prev = segments[i - 1];
+        const curr = segments[i];
+        const cpX = (prev.x + curr.x) / 2;
+        const cpY = (prev.y + curr.y) / 2;
+        ctx.quadraticCurveTo(prev.x, prev.y, cpX, cpY);
+      }
+      ctx.lineTo(segments[segments.length - 1].x, segments[segments.length - 1].y);
+      ctx.stroke();
+      // Draw core vine
+      ctx.globalAlpha = 0.8;
+      ctx.lineWidth = pulseWidth;
+      ctx.shadowBlur = 8;
+      ctx.stroke();
+      // Draw leaf buds at segment points
+      ctx.globalAlpha = glowIntensity * 0.7;
+      segments.forEach((seg, i) => {
+        if (i % 2 === 1) {
+          const leafSize = 3 + Math.sin(t * 0.004 + i + vine.glowPhase) * 1;
+          ctx.beginPath();
+          ctx.arc(seg.x, seg.y, leafSize, 0, Math.PI * 2);
+          ctx.fillStyle = vine.color;
+          ctx.fill();
+        }
+      });
+      ctx.restore();
+    });
+  }
+
   function drawMonuments(time) {
     const pulse = Math.sin(time * 0.004) * 0.08 + 0.22;
     monuments.forEach((mon, idx) => {
@@ -5662,6 +5729,7 @@ body.meditation-mode #nav {
     drawZones(time);
     drawMemoryWell(time);
     drawRuins(time);
+    drawGlowingVines(time);
     drawFloatingIslands(time);
     drawMonuments(time);
     drawRipples(time);
