@@ -1333,6 +1333,9 @@ body.meditation-mode #nav {
     echomote: '#aaccff'
   };
   const spiritCompanions = [];
+  const fireflySwarms = [];
+  const swarmCount = 8;
+  const swarmColors = ["#ffffaa", "#aaffaa", "#ffff88", "#ccffcc", "#ffffcc", "#88ff88", "#ffee99", "#aaffcc"];
   const MAX_SPIRITS = 3;
   let nextSpiritSpawn = 0;
   const spiritColors = ['#f5e3ff', '#dff4ff', '#e7ffe4', '#fff2df', '#e3f0ff', '#ffe8f5'];
@@ -1719,6 +1722,36 @@ body.meditation-mode #nav {
         fleeTimer: 0
       });
     }
+
+  function initFireflySwarms() {
+    fireflySwarms.length = 0;
+    for (let i = 0; i < swarmCount; i++) {
+      const centerX = 200 + Math.random() * (worldSize - 400);
+      const centerY = 200 + Math.random() * (worldSize - 400);
+      const fireflyCount = 6 + Math.floor(Math.random() * 8);
+      const swarmFireflies = [];
+      for (let j = 0; j < fireflyCount; j++) {
+        swarmFireflies.push({
+          offsetX: (Math.random() - 0.5) * 80,
+          offsetY: (Math.random() - 0.5) * 80,
+          size: 1.5 + Math.random() * 2,
+          orbitSpeed: 0.0003 + Math.random() * 0.0006,
+          orbitRadius: 10 + Math.random() * 30,
+          orbitPhase: Math.random() * Math.PI * 2
+        });
+      }
+      fireflySwarms.push({
+        x: centerX,
+        y: centerY,
+        vx: (Math.random() - 0.5) * 0.1,
+        vy: (Math.random() - 0.5) * 0.1,
+        color: swarmColors[i % swarmColors.length],
+        pulsePhase: Math.random() * Math.PI * 2,
+        pulseSpeed: 0.002 + Math.random() * 0.002,
+        fireflies: swarmFireflies
+      });
+    }
+  }
   }
 
   function initStreams() {
@@ -2570,6 +2603,35 @@ body.meditation-mode #nav {
           creature.fleeing = false;
         }
       }
+    });
+  }
+
+  function updateFireflySwarms(dt) {
+    const dtFactor = dt / 16.6667;
+    fireflySwarms.forEach(swarm => {
+      // Drift the swarm center slowly
+      swarm.x += swarm.vx * dtFactor;
+      swarm.y += swarm.vy * dtFactor;
+      
+      // Bounce off world edges
+      if (swarm.x < 100 || swarm.x > worldSize - 100) swarm.vx *= -1;
+      if (swarm.y < 100 || swarm.y > worldSize - 100) swarm.vy *= -1;
+      
+      // Random drift changes
+      if (Math.random() < 0.002) {
+        swarm.vx = (Math.random() - 0.5) * 0.15;
+        swarm.vy = (Math.random() - 0.5) * 0.15;
+      }
+      
+      // Update pulse phase
+      swarm.pulsePhase += swarm.pulseSpeed * dtFactor;
+      if (swarm.pulsePhase > Math.PI * 2) swarm.pulsePhase -= Math.PI * 2;
+      
+      // Update individual firefly orbits
+      swarm.fireflies.forEach(f => {
+        f.orbitPhase += f.orbitSpeed * dtFactor;
+        if (f.orbitPhase > Math.PI * 2) f.orbitPhase -= Math.PI * 2;
+      });
     });
   }
 
@@ -4335,6 +4397,59 @@ body.meditation-mode #nav {
       ctx.beginPath();
       ctx.arc(creature.x, creature.y, creature.size, 0, Math.PI * 2);
       ctx.fill();
+
+  function drawFireflySwarms(time) {
+    const viewW = width / camera.zoom;
+    const viewH = height / camera.zoom;
+    const halfW = viewW / 2;
+    const halfH = viewH / 2;
+    
+    fireflySwarms.forEach(swarm => {
+      // Check if swarm is in view
+      if (
+        swarm.x < camera.x - halfW - 100 ||
+        swarm.x > camera.x + halfW + 100 ||
+        swarm.y < camera.y - halfH - 100 ||
+        swarm.y > camera.y + halfH + 100
+      ) {
+        return;
+      }
+      
+      // Synchronized pulse for the whole swarm
+      const pulse = (Math.sin(swarm.pulsePhase) + 1) * 0.5;
+      const brightness = 0.3 + pulse * 0.7;
+      
+      swarm.fireflies.forEach(f => {
+        // Calculate firefly position with orbit
+        const orbitX = Math.cos(f.orbitPhase) * f.orbitRadius;
+        const orbitY = Math.sin(f.orbitPhase) * f.orbitRadius;
+        const fx = swarm.x + f.offsetX + orbitX;
+        const fy = swarm.y + f.offsetY + orbitY;
+        
+        // Draw glow
+        const glowRadius = f.size * 4;
+        const glow = ctx.createRadialGradient(fx, fy, 0, fx, fy, glowRadius);
+        glow.addColorStop(0, colorWithAlpha(swarm.color, 0.6 * brightness));
+        glow.addColorStop(0.5, colorWithAlpha(swarm.color, 0.2 * brightness));
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        
+        ctx.fillStyle = glow;
+        ctx.shadowBlur = 12 * brightness;
+        ctx.shadowColor = colorWithAlpha(swarm.color, 0.5 * brightness);
+        ctx.beginPath();
+        ctx.arc(fx, fy, glowRadius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw core
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = colorWithAlpha(swarm.color, 0.8 * brightness);
+        ctx.beginPath();
+        ctx.arc(fx, fy, f.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    });
+    ctx.shadowBlur = 0;
+  }
     });
   }
 
@@ -5179,6 +5294,7 @@ body.meditation-mode #nav {
     drawGuideSpirits(time);
     drawSpirits(time);
     drawCreatures();
+    drawFireflySwarms(time);
     drawAttractorOrbs(time);
     drawGlowingMushrooms(time);
     if (!meditationMode) {
@@ -5405,6 +5521,7 @@ body.meditation-mode #nav {
     updateEchoes(scaledDt, timestamp);
     updateWisps(scaledDt);
     updateCreatures(scaledDt);
+    updateFireflySwarms(scaledDt);
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
@@ -5793,6 +5910,7 @@ body.meditation-mode #nav {
   initCosmicDust();
   initWisps();
   initCreatures();
+  initFireflySwarms();
   initStreams();
   initPathways();
   initAttractorOrbs();
