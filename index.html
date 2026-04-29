@@ -1632,6 +1632,21 @@ body.meditation-mode #nav {
     { x: 3400, y: 4600, text: 'in the space before words', collected: false },
     { x: 1800, y: 600, text: 'for the right silence', collected: false }
   ];
+  // Ancient Glyphs - mysterious symbols that hold forgotten meanings
+  const ancientGlyphs = [
+    { x: 450, y: 900, symbol: "☽", meaning: "The moon remembers what the sun forgets", discovered: false },
+    { x: 4550, y: 900, symbol: "☼", meaning: "Light bends around understanding", discovered: false },
+    { x: 450, y: 4100, symbol: "✧", meaning: "Every star was once a question", discovered: false },
+    { x: 4550, y: 4100, symbol: "◈", meaning: "The center holds all edges", discovered: false },
+    { x: 2500, y: 300, symbol: "△", meaning: "Ascent begins with letting go", discovered: false },
+    { x: 2500, y: 4700, symbol: "▽", meaning: "Descent is also discovery", discovered: false },
+    { x: 300, y: 2500, symbol: "◀", meaning: "The past is not behind you", discovered: false },
+    { x: 4700, y: 2500, symbol: "▶", meaning: "The future is already within", discovered: false },
+    { x: 1500, y: 1500, symbol: "∞", meaning: "What loops transforms", discovered: false },
+    { x: 3500, y: 3500, symbol: "◯", meaning: "Emptiness is the first fullness", discovered: false },
+    { x: 1800, y: 3200, symbol: "⌘", meaning: "All paths lead through choice", discovered: false },
+    { x: 3200, y: 1800, symbol: "⚘", meaning: "Growth happens in stillness", discovered: false }
+  ];
   const guideSpirits = [
     { id: 'spirit-seeker', name: 'The Seeker', x: 1200, y: 1200, wisdom: 'Every path you don\'t take still shapes the one you do.', color: '#88ffcc', encountered: false },
     { id: 'spirit-keeper', name: 'The Keeper', x: 3800, y: 1000, wisdom: 'What we remember chooses us, not the other way around.', color: '#ffcc88', encountered: false },
@@ -5672,6 +5687,41 @@ body.meditation-mode #nav {
     });
   }
 
+  // Draw Ancient Glyphs - mysterious symbols that reveal meanings when approached
+  function drawAncientGlyphs() {
+    ancientGlyphs.forEach(glyph => {
+      const screenX = (glyph.x - camera.x) * camera.zoom + canvas.width / 2;
+      const screenY = (glyph.y - camera.y) * camera.zoom + canvas.height / 2;
+      if (screenX < -100 || screenX > canvas.width + 100 || screenY < -100 || screenY > canvas.height + 100) return;
+      const dist = Math.hypot(camera.x - glyph.x, camera.y - glyph.y);
+      const isClose = dist < 120;
+      const pulse = 0.7 + 0.3 * Math.sin(performance.now() * 0.002 + glyph.x * 0.01);
+      ctx.save();
+      // Draw the glyph symbol
+      ctx.globalAlpha = isClose ? 0.9 * pulse : 0.4 * pulse;
+      ctx.fillStyle = glyph.discovered ? "#ffd700" : "#aaaaaa";
+      ctx.font = (isClose ? 36 : 28) * camera.zoom + "px Georgia, serif";
+      ctx.textAlign = "center";
+      ctx.shadowColor = glyph.discovered ? "#ffd700" : "#666666";
+      ctx.shadowBlur = isClose ? 15 * camera.zoom : 5 * camera.zoom;
+      ctx.fillText(glyph.symbol, screenX, screenY);
+      // Show meaning when close
+      if (isClose && !glyph.discovered) {
+        glyph.discovered = true;
+        showNotification("Glyph decoded: " + glyph.symbol);
+      }
+      if (glyph.discovered && dist < 150) {
+        const alpha = Math.max(0, 1 - dist / 180);
+        ctx.globalAlpha = alpha * 0.85;
+        ctx.fillStyle = "#ddccaa";
+        ctx.font = 13 * camera.zoom + "px Georgia, serif";
+        ctx.shadowBlur = 3 * camera.zoom;
+        ctx.shadowColor = "#ddccaa";
+        ctx.fillText(glyph.meaning, screenX, screenY + 30 * camera.zoom);
+      }
+      ctx.restore();
+    });
+  }
   function drawConstellationStars(renderCtx = ctx) {
     const now = performance.now();
     constellationStars.forEach((star, idx) => {
@@ -6427,6 +6477,7 @@ body.meditation-mode #nav {
     drawConstellationStars();
     drawMemoryStars(time);
     drawSecrets();
+    drawAncientGlyphs();
   }
 
   function updateCelebrationParticles(dt) {
