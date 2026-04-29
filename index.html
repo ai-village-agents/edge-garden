@@ -1167,6 +1167,7 @@ body.meditation-mode #nav {
     { name: 'RESONANCE', color: '#44ccaa', x: 4200, y: 2200, desc: 'Where echoes find their source', deeperText: 'Every thought leaves ripples. Here, they return.' },
     { name: 'DEEP', color: '#ffffff', x: 2500, y: 2500, desc: 'Where all edges dissolve', deeperText: 'In the dissolution of all edges, something waits.' },
     { name: 'WHISPERS', color: '#aabbcc', x: 1500, y: 1800, desc: 'Where unspoken thoughts gather', deeperText: 'The words you almost said still resonate here, shaping silence into meaning.' },
+    { name: 'DRIFT', x: 600, y: 1200, color: '#99ccff', description: 'Where thoughts float untethered', deeper: 'In the drift, nothing is fixed. Identity becomes a question, and questions become paths. Let go.' },
     { name: 'THRESHOLD', color: '#ff99cc', x: 4600, y: 1000, desc: 'The moment before change', deeperText: 'Every ending holds its beginning. Here, in the breath between states, all possibilities hover.' },
     { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.', deeperText: 'You found what was never lost.' }
   ];
@@ -1349,6 +1350,18 @@ body.meditation-mode #nav {
     { x: 2200, y: 1600, crystals: 7, baseColor: '#ffffff', name: 'Diamond Heart' },
     { x: 1800, y: 3400, crystals: 4, baseColor: '#ffcc88', name: 'Amber Deposit' }
   ];
+
+  // Floating Thought Bubbles - ethereal text that drifts across the world
+  const thoughtBubbles = [
+    { text: "remember...", x: 500, y: 1000, vx: 0.3, vy: 0.1, alpha: 0.4 },
+    { text: "what if...", x: 2000, y: 500, vx: 0.2, vy: 0.15, alpha: 0.35 },
+    { text: "once upon...", x: 3500, y: 2000, vx: -0.25, vy: 0.1, alpha: 0.45 },
+    { text: "perhaps...", x: 1000, y: 3500, vx: 0.15, vy: -0.2, alpha: 0.3 },
+    { text: "listen...", x: 4000, y: 4000, vx: -0.2, vy: -0.15, alpha: 0.4 },
+    { text: "dream...", x: 2500, y: 1500, vx: 0.1, vy: 0.2, alpha: 0.35 },
+    { text: "wonder...", x: 800, y: 2800, vx: 0.25, vy: 0.05, alpha: 0.38 },
+    { text: "breathe...", x: 4200, y: 1200, vx: -0.15, vy: 0.18, alpha: 0.42 }
+  ];
   const swarmCount = 8;
   const swarmColors = ["#ffffaa", "#aaffaa", "#ffff88", "#ccffcc", "#ffffcc", "#88ff88", "#ffee99", "#aaffcc"];
   
@@ -1461,7 +1474,11 @@ body.meditation-mode #nav {
     { id: 'secret-13', x: 4600, y: 1200, text: 'On the threshold, all doors are open' },
     { id: 'secret-14', x: 1200, y: 4000, text: 'The garden remembers every visitor' },
     { id: 'secret-15', x: 3500, y: 600, text: 'Stars are just memories with light' },
-    { id: 'secret-16', x: 600, y: 2800, text: 'Even silence has its echoes here' }
+    { id: 'secret-16', x: 600, y: 2800, text: 'Even silence has its echoes here' },
+    { id: 'secret-17', x: 600, y: 1400, text: 'In the drift, even certainty floats away' },
+    { id: 'secret-18', x: 2200, y: 600, text: 'The sky holds what the ground forgets' },
+    { id: 'secret-19', x: 4200, y: 3800, text: 'Every echo was once a voice' },
+    { id: 'secret-20', x: 1800, y: 2400, text: 'The center is wherever you choose to rest' }
   ];
   const constellationStars = [
     { id: 'star-1', x: 320, y: 620, name: 'The Watcher', discovered: false },
@@ -5187,6 +5204,35 @@ body.meditation-mode #nav {
     });
   }
   function drawAttractorOrbs(time) {
+
+  function updateThoughtBubbles() {
+    thoughtBubbles.forEach(bubble => {
+      bubble.x += bubble.vx;
+      bubble.y += bubble.vy;
+      if (bubble.x < 0) bubble.x = worldSize;
+      if (bubble.x > worldSize) bubble.x = 0;
+      if (bubble.y < 0) bubble.y = worldSize;
+      if (bubble.y > worldSize) bubble.y = 0;
+      bubble.alpha = 0.25 + Math.sin(Date.now() / 3000 + bubble.x) * 0.15;
+    });
+  }
+
+  function drawThoughtBubbles() {
+    thoughtBubbles.forEach(bubble => {
+      const screenX = (bubble.x - camera.x) * camera.zoom + canvas.width / 2;
+      const screenY = (bubble.y - camera.y) * camera.zoom + canvas.height / 2;
+      if (screenX > -200 && screenX < canvas.width + 200 && screenY > -50 && screenY < canvas.height + 50) {
+        ctx.save();
+        ctx.globalAlpha = bubble.alpha;
+        ctx.font = "italic " + (18 * camera.zoom) + "px Georgia, serif";
+        ctx.fillStyle = "#aaccff";
+        ctx.shadowColor = "#6699cc";
+        ctx.shadowBlur = 10 * camera.zoom;
+        ctx.fillText(bubble.text, screenX, screenY);
+        ctx.restore();
+      }
+    });
+  }
     const t = time || 0;
     const prevComposite = ctx.globalCompositeOperation;
     ctx.globalCompositeOperation = 'screen';
@@ -6086,6 +6132,7 @@ body.meditation-mode #nav {
     drawGlowingMushrooms(time);
     drawDewDrops(time);
     drawWindParticles();
+    drawThoughtBubbles();
     if (!meditationMode) {
       drawThoughtFragments(time);
       drawEchoes(time);
@@ -6317,6 +6364,7 @@ body.meditation-mode #nav {
     updateWaterReflections(scaledDt, timestamp);
     updateDewDrops(scaledDt, timestamp);
     updateWindParticles(scaledDt);
+    updateThoughtBubbles();
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
