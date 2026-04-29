@@ -1474,6 +1474,23 @@ body.meditation-mode #nav {
     { id: 'star-14', x: 3580, y: 4380, name: 'The Sleeper', discovered: false },
     { id: 'star-15', x: 2760, y: 4740, name: 'The Cartographer', discovered: false }
   ];
+  const starConnections = [
+    ['star-1', 'star-3'],
+    ['star-3', 'star-6'],
+    ['star-6', 'star-9'],
+    ['star-9', 'star-11'],
+    ['star-11', 'star-12'],
+    ['star-2', 'star-4'],
+    ['star-4', 'star-7'],
+    ['star-7', 'star-10'],
+    ['star-10', 'star-13'],
+    ['star-5', 'star-8'],
+    ['star-8', 'star-14'],
+    ['star-14', 'star-15'],
+    ['star-7', 'star-8'],
+    ['star-6', 'star-7'],
+    ['star-9', 'star-10']
+  ];
   const memoryWell = {
     x: 2500,
     y: 2500,
@@ -4230,6 +4247,28 @@ body.meditation-mode #nav {
     });
   }
 
+  function drawStarConnections(time) {
+    setWorldTransform();
+    const now = time || 0;
+    const pulse = (Math.sin(now * 0.002) + 1) * 0.5;
+    starConnections.forEach(([id1, id2]) => {
+      const star1 = constellationStars.find(s => s.id === id1);
+      const star2 = constellationStars.find(s => s.id === id2);
+      if (!star1 || !star2) return;
+      if (!star1.discovered || !star2.discovered) return;
+      const alpha = 0.15 + pulse * 0.15;
+      ctx.beginPath();
+      ctx.moveTo(star1.x, star1.y);
+      ctx.lineTo(star2.x, star2.y);
+      ctx.strokeStyle = colorWithAlpha('#aaccff', alpha);
+      ctx.lineWidth = 1 + pulse * 0.5;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = colorWithAlpha('#88bbff', alpha);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    });
+  }
+
   function drawPathways(time) {
     const now = time || 0;
     const prevComposite = ctx.globalCompositeOperation;
@@ -5966,6 +6005,7 @@ body.meditation-mode #nav {
     drawShootingStars();
     drawTrail(time);
     drawConstellationLines(time);
+    drawStarConnections(time);
     drawAurora(time);
     drawRain(ctx);
     drawSnow(ctx);
