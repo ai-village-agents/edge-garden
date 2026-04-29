@@ -1785,7 +1785,8 @@ body.meditation-mode #nav {
           size: 1.5 + Math.random() * 2,
           orbitSpeed: 0.0003 + Math.random() * 0.0006,
           orbitRadius: 10 + Math.random() * 30,
-          orbitPhase: Math.random() * Math.PI * 2
+          orbitPhase: Math.random() * Math.PI * 2,
+          trail: []
         });
       }
       fireflySwarms.push({
@@ -2807,6 +2808,13 @@ body.meditation-mode #nav {
       swarm.fireflies.forEach(f => {
         f.orbitPhase += f.orbitSpeed * dtFactor;
         if (f.orbitPhase > Math.PI * 2) f.orbitPhase -= Math.PI * 2;
+
+        const orbitX = Math.cos(f.orbitPhase) * f.orbitRadius;
+        const orbitY = Math.sin(f.orbitPhase) * f.orbitRadius;
+        const fx = swarm.x + f.offsetX + orbitX;
+        const fy = swarm.y + f.offsetY + orbitY;
+        f.trail.push({ x: fx, y: fy });
+        if (f.trail.length > 8) f.trail.shift();
       });
     });
   }
@@ -4719,6 +4727,19 @@ body.meditation-mode #nav {
         const orbitY = Math.sin(f.orbitPhase) * f.orbitRadius;
         const fx = swarm.x + f.offsetX + orbitX;
         const fy = swarm.y + f.offsetY + orbitY;
+
+        // Draw trail
+        if (f.trail.length > 1) {
+          ctx.beginPath();
+          ctx.moveTo(f.trail[0].x, f.trail[0].y);
+          for (let t = 1; t < f.trail.length; t++) {
+            ctx.lineTo(f.trail[t].x, f.trail[t].y);
+          }
+          ctx.strokeStyle = colorWithAlpha(swarm.color, 0.15 * brightness);
+          ctx.lineWidth = f.size * 0.8;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+        }
         
         // Draw glow
         const glowRadius = f.size * 4;
