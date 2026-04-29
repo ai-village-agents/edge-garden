@@ -1355,6 +1355,10 @@ body.meditation-mode #nav {
   const pollenParticles = [];
   const pollenCount = 80;
   const pollenColors = ["#ffdd66", "#ffcc44", "#ffe488", "#ffd700", "#fff2aa"];
+  // Falling Leaves - gentle autumn atmosphere
+  const fallingLeaves = [];
+  const leafCount = 50;
+  const leafColors = ["#cc6633", "#dd8844", "#bb5522", "#aa4411", "#cc7744", "#996633", "#dd9955", "#ee7733"];
   const MAX_SPIRITS = 3;
   let nextSpiritSpawn = 0;
   const spiritColors = ['#f5e3ff', '#dff4ff', '#e7ffe4', '#fff2df', '#e3f0ff', '#ffe8f5'];
@@ -1857,6 +1861,25 @@ body.meditation-mode #nav {
         wobbleAmp: 0.3 + Math.random() * 0.4,
         opacity: 0.3 + Math.random() * 0.4,
         drift: 0.1 + Math.random() * 0.15
+      });
+    }
+  }
+
+  function initFallingLeaves() {
+    fallingLeaves.length = 0;
+    for (let i = 0; i < leafCount; i++) {
+      fallingLeaves.push({
+        x: Math.random() * worldSize,
+        y: Math.random() * worldSize,
+        size: 4 + Math.random() * 6,
+        color: leafColors[Math.floor(Math.random() * leafColors.length)],
+        rotation: Math.random() * Math.PI * 2,
+        rotationSpeed: (Math.random() - 0.5) * 0.04,
+        swayPhase: Math.random() * Math.PI * 2,
+        swaySpeed: 0.01 + Math.random() * 0.015,
+        swayAmp: 20 + Math.random() * 30,
+        fallSpeed: 0.15 + Math.random() * 0.25,
+        opacity: 0.5 + Math.random() * 0.4
       });
     }
   }
@@ -2798,6 +2821,32 @@ body.meditation-mode #nav {
       if (p.x > worldSize) p.x -= worldSize;
       if (p.y < 0) p.y += worldSize;
       if (p.y > worldSize) p.y -= worldSize;
+    });
+  }
+
+  function updateFallingLeaves(dt) {
+    const dtFactor = dt / 16.6667;
+    fallingLeaves.forEach(leaf => {
+      // Sway side to side
+      leaf.swayPhase += leaf.swaySpeed * dtFactor;
+      if (leaf.swayPhase > Math.PI * 2) leaf.swayPhase -= Math.PI * 2;
+      const swayOffset = Math.sin(leaf.swayPhase) * leaf.swayAmp * 0.1;
+      
+      // Fall and drift with wind
+      leaf.x += (wind.x * 0.5 + swayOffset) * dtFactor;
+      leaf.y += (leaf.fallSpeed + wind.y * 0.3) * dtFactor;
+      
+      // Rotate as falling
+      leaf.rotation += leaf.rotationSpeed * dtFactor;
+      
+      // Wrap around world
+      if (leaf.x < 0) leaf.x += worldSize;
+      if (leaf.x > worldSize) leaf.x -= worldSize;
+      if (leaf.y > worldSize) {
+        leaf.y = -20;
+        leaf.x = Math.random() * worldSize;
+      }
+      if (leaf.y < -50) leaf.y += worldSize + 50;
     });
   }
 
@@ -4847,6 +4896,49 @@ body.meditation-mode #nav {
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
       ctx.fill();
+
+  function drawFallingLeaves(time) {
+    const viewW = width / camera.zoom;
+    const viewH = height / camera.zoom;
+    const halfW = viewW / 2;
+    const halfH = viewH / 2;
+    
+    fallingLeaves.forEach(leaf => {
+      // Check if in view
+      if (
+        leaf.x < camera.x - halfW - 30 ||
+        leaf.x > camera.x + halfW + 30 ||
+        leaf.y < camera.y - halfH - 30 ||
+        leaf.y > camera.y + halfH + 30
+      ) {
+        return;
+      }
+      
+      ctx.save();
+      ctx.translate(leaf.x, leaf.y);
+      ctx.rotate(leaf.rotation);
+      ctx.globalAlpha = leaf.opacity;
+      
+      // Draw leaf shape
+      ctx.fillStyle = leaf.color;
+      ctx.beginPath();
+      ctx.moveTo(0, -leaf.size);
+      ctx.quadraticCurveTo(leaf.size * 0.8, -leaf.size * 0.3, leaf.size * 0.5, leaf.size * 0.5);
+      ctx.quadraticCurveTo(0, leaf.size * 0.8, -leaf.size * 0.5, leaf.size * 0.5);
+      ctx.quadraticCurveTo(-leaf.size * 0.8, -leaf.size * 0.3, 0, -leaf.size);
+      ctx.fill();
+      
+      // Draw stem/vein
+      ctx.strokeStyle = colorWithAlpha("#553322", 0.6);
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(0, -leaf.size);
+      ctx.lineTo(0, leaf.size * 0.6);
+      ctx.stroke();
+      
+      ctx.restore();
+    });
+  }
     });
   }
   function drawAttractorOrbs(time) {
@@ -5742,6 +5834,7 @@ body.meditation-mode #nav {
     drawCrystalFormations(time);
     drawEtherealButterflies(time);
     drawPollenParticles(time);
+    drawFallingLeaves(time);
     drawAttractorOrbs(time);
     drawGlowingMushrooms(time);
     if (!meditationMode) {
@@ -5971,6 +6064,7 @@ body.meditation-mode #nav {
     updateFireflySwarms(scaledDt);
     updateEtherealButterflies(scaledDt);
     updatePollenParticles(scaledDt);
+    updateFallingLeaves(scaledDt);
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
@@ -6363,6 +6457,7 @@ body.meditation-mode #nav {
   initCrystalFormations();
   initEtherealButterflies();
   initPollenParticles();
+  initFallingLeaves();
   initStreams();
   initPathways();
   initAttractorOrbs();
