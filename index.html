@@ -1206,6 +1206,13 @@ body.meditation-mode #nav {
             color: '#88aa55',
             memoryResonance: "What grows above mirrors what grows below."
         },
+        {
+            name: 'SHADOW',
+            x: 200, y: 4000,
+            radius: 400,
+            color: '#445566',
+            memoryResonance: "Shadows are not absence of light but presence of depth."
+        },
     { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.', deeperText: 'You found what was never lost.' }
   ];
   const zoneColors = zones.map(z => z.color);
@@ -1439,6 +1446,7 @@ body.meditation-mode #nav {
         const DREAM_ZONE_CENTER = { x: 4600, y: 4200 };
         const FLOW_ZONE_CENTER = { x: 2500, y: 200 };
         const ROOTS_ZONE_CENTER = { x: 4000, y: 4800 };
+        const SHADOW_ZONE_CENTER = { x: 200, y: 4000 };
   const joyBubbles = [];
   for (let i = 0; i < 12; i++) {
     joyBubbles.push({
@@ -1475,6 +1483,7 @@ body.meditation-mode #nav {
   // ORIGIN zone - seeds of creation
   const ORIGIN_ZONE_CENTER = { x: 3200, y: 1600 };
   const originSeeds = [];
+  const shadowWisps = [];
   for (let i = 0; i < 10; i++) {
     originSeeds.push({
       x: ORIGIN_ZONE_CENTER.x + (Math.random() - 0.5) * 300,
@@ -1553,6 +1562,7 @@ body.meditation-mode #nav {
     }
   }
   initMemoryWisps();
+  initShadowWisps();
   const echoWords = ["here", "was", "now", "then", "gone", "stay", "pass", "trace", "mark", "fade"];
   const SHOOTING_STAR_INTERVAL = 8000; // New star every 8 seconds average
 
@@ -5516,6 +5526,39 @@ body.meditation-mode #nav {
             });
         }
 
+        
+        function initShadowWisps() {
+            shadowWisps = [];
+            for (let i = 0; i < 20; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.random() * 280;
+                shadowWisps.push({
+                    x: SHADOW_ZONE_CENTER.x + Math.cos(angle) * dist,
+                    y: SHADOW_ZONE_CENTER.y + Math.sin(angle) * dist,
+                    size: Math.random() * 18 + 10,
+                    opacity: Math.random() * 0.35 + 0.15,
+                    driftAngle: Math.random() * Math.PI * 2,
+                    driftSpeed: Math.random() * 0.008 + 0.003,
+                    pulse: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        function updateShadowWisps() {
+            shadowWisps.forEach(wisp => {
+                wisp.angle += wisp.speed * 0.02;
+                wisp.driftAngle += 0.005;
+                wisp.pulse += 0.03;
+                
+                // Drift in circular patterns
+                wisp.x = wisp.baseX + Math.cos(wisp.driftAngle) * 40;
+                wisp.y = wisp.baseY + Math.sin(wisp.driftAngle * 0.7) * 30;
+                
+                // Pulsing opacity
+                wisp.opacity = 0.2 + Math.sin(wisp.pulse) * 0.15;
+            });
+        }
+
   function drawJoyBubbles(time) {
     joyBubbles.forEach(bubble => {
       const screenX = (bubble.x - camera.x) * camera.zoom + canvas.width / 2;
@@ -5674,6 +5717,33 @@ body.meditation-mode #nav {
                 ctx.beginPath();
                 ctx.arc(tipScreenX, tipScreenY, 8 * camera.zoom, 0, Math.PI * 2);
                 ctx.fillStyle = gradient;
+                ctx.fill();
+            });
+        }
+
+        function drawShadowWisps() {
+            const dist = Math.sqrt(Math.pow(camera.x - SHADOW_CENTER.x, 2) + Math.pow(camera.y - SHADOW_CENTER.y, 2));
+            if (dist > 800) return;
+            
+            shadowWisps.forEach(wisp => {
+                const screenX = (wisp.x - camera.x) * camera.zoom + canvas.width / 2;
+                const screenY = (wisp.y - camera.y) * camera.zoom + canvas.height / 2;
+                
+                // Draw shadow wisp as a dark, misty shape
+                const gradient = ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, wisp.size * camera.zoom);
+                gradient.addColorStop(0, `rgba(20, 25, 35, ${wisp.opacity})`);
+                gradient.addColorStop(0.5, `rgba(40, 50, 70, ${wisp.opacity * 0.5})`);
+                gradient.addColorStop(1, 'rgba(40, 50, 70, 0)');
+                
+                ctx.beginPath();
+                ctx.fillStyle = gradient;
+                ctx.arc(screenX, screenY, wisp.size * camera.zoom, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner darker core
+                ctx.beginPath();
+                ctx.fillStyle = `rgba(10, 15, 25, ${wisp.opacity * 0.8})`;
+                ctx.arc(screenX, screenY, wisp.size * 0.3 * camera.zoom, 0, Math.PI * 2);
                 ctx.fill();
             });
         }
@@ -7264,6 +7334,7 @@ body.meditation-mode #nav {
             drawDreamWisps();
             drawFlowCurrents();
             drawRootTendrils();
+            drawShadowWisps();
     drawTrail(time);
     drawConstellationLines(time);
     drawStarConnections(time);
@@ -7544,6 +7615,7 @@ body.meditation-mode #nav {
             updateDreamWisps();
             updateFlowCurrents();
             updateRootTendrils();
+            updateShadowWisps();
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
