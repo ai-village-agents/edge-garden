@@ -1176,6 +1176,7 @@ body.meditation-mode #nav {
     { name: 'BECOMING', x: 4400, y: 3800, color: '#ff77aa', description: 'Where transformation unfolds', deeper: 'Every edge is a becoming. What you were dissolves into what you might be. The garden watches your unfolding.' },
     { name: 'WONDER', x: 1800, y: 3200, color: '#ffdd44', description: 'Where awe takes root', deeper: 'Wonder is not ignorance but attention. The more you see, the more there is to see. Each discovery reveals deeper mysteries.' },
     { name: 'ORIGIN', x: 3200, y: 1600, color: '#ff9933', description: 'Where all begins', deeper: 'Every ending circles back to origin. Every journey starts from the place you never truly left. Return is not regression but recognition.' },
+    { name: 'BREATH', x: 4800, y: 2800, color: '#88ddcc', description: 'The pause between', deeper: 'Breath is the oldest rhythm. In the space between inhale and exhale, eternity waits. The garden breathes with you.' },
     { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.', deeperText: 'You found what was never lost.' }
   ];
   const zoneColors = zones.map(z => z.color);
@@ -1447,6 +1448,22 @@ body.meditation-mode #nav {
       alpha: 0.8,
       hue: 30 + Math.random() * 15
     });
+
+  // BREATH zone - gentle expanding/contracting motes
+  const BREATH_ZONE_CENTER = { x: 4800, y: 2800 };
+  const breathMotes = [];
+  for (let i = 0; i < 15; i++) {
+    breathMotes.push({
+      x: BREATH_ZONE_CENTER.x + (Math.random() - 0.5) * 400,
+      y: BREATH_ZONE_CENTER.y + (Math.random() - 0.5) * 400,
+      baseSize: 3 + Math.random() * 5,
+      breathPhase: Math.random() * Math.PI * 2,
+      breathSpeed: 0.001 + Math.random() * 0.001,
+      driftX: (Math.random() - 0.5) * 0.3,
+      driftY: (Math.random() - 0.5) * 0.3,
+      alpha: 0.4 + Math.random() * 0.4
+    });
+  }
   }
   }
   }
@@ -5178,6 +5195,53 @@ body.meditation-mode #nav {
     });
   }
 
+  function updateBreathMotes(dt) {
+    breathMotes.forEach(mote => {
+      mote.breathPhase += mote.breathSpeed * dt;
+      mote.x += mote.driftX * dt * 0.02;
+      mote.y += mote.driftY * dt * 0.02;
+      
+      // Keep within zone
+      const dx = mote.x - BREATH_ZONE_CENTER.x;
+      const dy = mote.y - BREATH_ZONE_CENTER.y;
+      if (Math.abs(dx) > 220) mote.driftX *= -1;
+      if (Math.abs(dy) > 220) mote.driftY *= -1;
+    });
+  }
+
+  function drawBreathMotes(time) {
+    breathMotes.forEach(mote => {
+      const screenX = (mote.x - camera.x) * camera.zoom + canvas.width / 2;
+      const screenY = (mote.y - camera.y) * camera.zoom + canvas.height / 2;
+      if (screenX < -50 || screenX > canvas.width + 50 || screenY < -50 || screenY > canvas.height + 50) return;
+      
+      const breathScale = 0.5 + 0.5 * Math.sin(mote.breathPhase);
+      const size = mote.baseSize * (0.6 + 0.8 * breathScale) * camera.zoom;
+      const alpha = mote.alpha * (0.5 + 0.5 * breathScale);
+      
+      ctx.save();
+      
+      const gradient = ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, size * 2);
+      gradient.addColorStop(0, "rgba(136, 221, 204, " + alpha + ")");
+      gradient.addColorStop(0.5, "rgba(100, 200, 180, " + (alpha * 0.5) + ")");
+      gradient.addColorStop(1, "rgba(80, 180, 160, 0)");
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, size * 2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "#ccffee";
+      ctx.shadowColor = "#88ddcc";
+      ctx.shadowBlur = 10 * camera.zoom;
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, size * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.restore();
+    });
+  }
+
   function drawGuideSpirits(time) {
     guideSpirits.forEach(spirit => {
       const dx = spirit.x - camera.x;
@@ -6758,6 +6822,7 @@ body.meditation-mode #nav {
     drawWonderOrbs(time);
     drawOriginSeeds(time);
     drawPrimordialPulses(time);
+    drawBreathMotes(time);
     drawTrail(time);
     drawConstellationLines(time);
     drawStarConnections(time);
@@ -7032,6 +7097,7 @@ body.meditation-mode #nav {
     updateWonderOrbs(scaledDt);
     updateOriginSeeds(scaledDt);
     updatePrimordialPulses(scaledDt);
+    updateBreathMotes(scaledDt);
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
