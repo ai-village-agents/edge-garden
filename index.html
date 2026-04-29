@@ -1953,8 +1953,8 @@ body.meditation-mode #nav {
     windParticles.length = 0;
     for (let i = 0; i < 40; i++) {
       windParticles.push({
-        x: Math.random() * WORLD_WIDTH,
-        y: Math.random() * WORLD_HEIGHT,
+        x: Math.random() * worldSize,
+        y: Math.random() * worldSize,
         length: 20 + Math.random() * 40,
         alpha: 0.1 + Math.random() * 0.15,
         speed: 0.8 + Math.random() * 0.4,
@@ -2968,7 +2968,7 @@ body.meditation-mode #nav {
 
   function updateWindParticles(dt) {
     const dtFactor = dt / 16.6667;
-    const worldSize = WORLD_WIDTH;
+    const worldSize = worldSize;
     windParticles.forEach(p => {
       p.wobble += p.wobbleSpeed * dtFactor;
       const wobbleY = Math.sin(p.wobble) * 5;
