@@ -2968,7 +2968,6 @@ body.meditation-mode #nav {
 
   function updateWindParticles(dt) {
     const dtFactor = dt / 16.6667;
-    const worldSize = worldSize;
     windParticles.forEach(p => {
       p.wobble += p.wobbleSpeed * dtFactor;
       const wobbleY = Math.sin(p.wobble) * 5;
