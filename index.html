@@ -1192,6 +1192,13 @@ body.meditation-mode #nav {
             color: '#dd88ff',
             memoryResonance: "Dreams are the garden's truest language."
         },
+        {
+            name: 'FLOW',
+            x: 2500, y: 200,
+            radius: 400,
+            color: '#44ddff',
+            memoryResonance: "To flow is to become the current, not resist it."
+        },
     { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.', deeperText: 'You found what was never lost.' }
   ];
   const zoneColors = zones.map(z => z.color);
@@ -1423,6 +1430,7 @@ body.meditation-mode #nav {
   const PLAY_ZONE_CENTER = { x: 1000, y: 4800 };
         const STILLNESS_ZONE_CENTER = { x: 200, y: 2400 };
         const DREAM_ZONE_CENTER = { x: 4600, y: 4200 };
+        const FLOW_ZONE_CENTER = { x: 2500, y: 200 };
   const joyBubbles = [];
   for (let i = 0; i < 12; i++) {
     joyBubbles.push({
@@ -1501,6 +1509,7 @@ body.meditation-mode #nav {
   const PLAY_ZONE_CENTER = { x: 1000, y: 4800 };
         const STILLNESS_ZONE_CENTER = { x: 200, y: 2400 };
         const DREAM_ZONE_CENTER = { x: 4600, y: 4200 };
+        const FLOW_ZONE_CENTER = { x: 2500, y: 200 };
   const joyBubbles = [];
   for (let i = 0; i < 12; i++) {
     joyBubbles.push({
@@ -5407,6 +5416,28 @@ body.meditation-mode #nav {
             });
         }
 
+        function updateFlowCurrents() {
+            flowCurrents.forEach(current => {
+                // Store trail position
+                current.trail.push({ x: current.x, y: current.y, alpha: current.alpha });
+                if (current.trail.length > 8) current.trail.shift();
+                
+                // Flow rightward with wave motion
+                current.x += current.speed;
+                current.y += Math.sin(current.waveOffset + current.x * 0.02) * 0.5;
+                current.waveOffset += 0.02;
+                
+                // Wrap around zone
+                if (current.x > FLOW_ZONE_CENTER.x + 400) {
+                    current.x = FLOW_ZONE_CENTER.x - 400;
+                    current.trail = [];
+                }
+                // Keep y within zone
+                if (current.y < FLOW_ZONE_CENTER.y - 350) current.y = FLOW_ZONE_CENTER.y - 350;
+                if (current.y > FLOW_ZONE_CENTER.y + 350) current.y = FLOW_ZONE_CENTER.y + 350;
+            });
+        }
+
   function drawJoyBubbles(time) {
     joyBubbles.forEach(bubble => {
       const screenX = (bubble.x - camera.x) * camera.zoom + canvas.width / 2;
@@ -5485,6 +5516,43 @@ body.meditation-mode #nav {
                 ctx.beginPath();
                 ctx.arc(screenX, screenY, morphSize * camera.zoom, 0, Math.PI * 2);
                 ctx.fillStyle = 'hsla(' + wisp.hue + ', 80%, 85%, ' + wisp.alpha + ')';
+                ctx.fill();
+            });
+        }
+
+        function drawFlowCurrents() {
+            flowCurrents.forEach(current => {
+                // Draw trail
+                current.trail.forEach((point, i) => {
+                    const screenX = (point.x - camera.x) * camera.zoom + canvas.width / 2;
+                    const screenY = (point.y - camera.y) * camera.zoom + canvas.height / 2;
+                    const trailAlpha = (i / current.trail.length) * point.alpha * 0.5;
+                    
+                    ctx.beginPath();
+                    ctx.arc(screenX, screenY, current.size * 0.6 * camera.zoom, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(68, 221, 255, ' + trailAlpha + ')';
+                    ctx.fill();
+                });
+                
+                // Draw main particle
+                const screenX = (current.x - camera.x) * camera.zoom + canvas.width / 2;
+                const screenY = (current.y - camera.y) * camera.zoom + canvas.height / 2;
+                
+                // Glow
+                const gradient = ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, current.size * 3 * camera.zoom);
+                gradient.addColorStop(0, 'rgba(68, 221, 255, ' + current.alpha + ')');
+                gradient.addColorStop(0.5, 'rgba(68, 221, 255, ' + (current.alpha * 0.3) + ')');
+                gradient.addColorStop(1, 'rgba(68, 221, 255, 0)');
+                
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, current.size * 3 * camera.zoom, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                
+                // Core
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, current.size * camera.zoom, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(200, 245, 255, ' + current.alpha + ')';
                 ctx.fill();
             });
         }
@@ -7073,6 +7141,7 @@ body.meditation-mode #nav {
     drawJoyBubbles(time);
             drawStillnessMotes();
             drawDreamWisps();
+            drawFlowCurrents();
     drawTrail(time);
     drawConstellationLines(time);
     drawStarConnections(time);
@@ -7351,6 +7420,7 @@ body.meditation-mode #nav {
     updateJoyBubbles(scaledDt);
             updateStillnessMotes();
             updateDreamWisps();
+            updateFlowCurrents();
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
