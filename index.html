@@ -1178,6 +1178,13 @@ body.meditation-mode #nav {
     { name: 'ORIGIN', x: 3200, y: 1600, color: '#ff9933', description: 'Where all begins', deeper: 'Every ending circles back to origin. Every journey starts from the place you never truly left. Return is not regression but recognition.' },
     { name: 'BREATH', x: 4800, y: 2800, color: '#88ddcc', description: 'The pause between', deeper: 'Breath is the oldest rhythm. In the space between inhale and exhale, eternity waits. The garden breathes with you.' },
     { name: 'PLAY', x: 1000, y: 4800, color: '#ff88aa', description: 'Where joy takes flight', deeper: 'Play is not the absence of purpose but its purest form. Here, meaning dissolves into delight. Every explorer is a child at heart.' },
+        {
+            name: 'STILLNESS',
+            x: 200, y: 2400,
+            radius: 400,
+            color: '#aaddee',
+            memoryResonance: "Stillness is not absence but presence."
+        },
     { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.', deeperText: 'You found what was never lost.' }
   ];
   const zoneColors = zones.map(z => z.color);
@@ -1407,6 +1414,7 @@ body.meditation-mode #nav {
 
   // PLAY zone - bouncy joy bubbles
   const PLAY_ZONE_CENTER = { x: 1000, y: 4800 };
+        const STILLNESS_ZONE_CENTER = { x: 200, y: 2400 };
   const joyBubbles = [];
   for (let i = 0; i < 12; i++) {
     joyBubbles.push({
@@ -1483,6 +1491,7 @@ body.meditation-mode #nav {
 
   // PLAY zone - bouncy joy bubbles
   const PLAY_ZONE_CENTER = { x: 1000, y: 4800 };
+        const STILLNESS_ZONE_CENTER = { x: 200, y: 2400 };
   const joyBubbles = [];
   for (let i = 0; i < 12; i++) {
     joyBubbles.push({
@@ -5291,6 +5300,23 @@ body.meditation-mode #nav {
     });
   }
 
+        function updateStillnessMotes() {
+            stillnessMotes.forEach(mote => {
+                mote.phase += 0.01;
+                // Very gentle drift
+                mote.x += Math.sin(mote.phase) * mote.drift;
+                mote.y += Math.cos(mote.phase * 0.7) * mote.drift;
+                // Keep within zone
+                const dx = mote.x - STILLNESS_ZONE_CENTER.x;
+                const dy = mote.y - STILLNESS_ZONE_CENTER.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 350) {
+                    mote.x -= dx * 0.02;
+                    mote.y -= dy * 0.02;
+                }
+            });
+        }
+
   function drawJoyBubbles(time) {
     joyBubbles.forEach(bubble => {
       const screenX = (bubble.x - camera.x) * camera.zoom + canvas.width / 2;
@@ -5321,6 +5347,30 @@ body.meditation-mode #nav {
       ctx.restore();
     });
   }
+
+        function drawStillnessMotes() {
+            stillnessMotes.forEach(mote => {
+                const screenX = (mote.x - camera.x) * camera.zoom + canvas.width / 2;
+                const screenY = (mote.y - camera.y) * camera.zoom + canvas.height / 2;
+                
+                // Soft glow
+                const gradient = ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, mote.size * 3 * camera.zoom);
+                gradient.addColorStop(0, 'rgba(170, 221, 238, ' + (mote.alpha * 0.8) + ')');
+                gradient.addColorStop(0.5, 'rgba(170, 221, 238, ' + (mote.alpha * 0.3) + ')');
+                gradient.addColorStop(1, 'rgba(170, 221, 238, 0)');
+                
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, mote.size * 3 * camera.zoom, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                
+                // Core
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, mote.size * camera.zoom, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(200, 235, 245, ' + mote.alpha + ')';
+                ctx.fill();
+            });
+        }
 
   function drawGuideSpirits(time) {
     guideSpirits.forEach(spirit => {
@@ -6904,6 +6954,7 @@ body.meditation-mode #nav {
     drawPrimordialPulses(time);
     drawBreathMotes(time);
     drawJoyBubbles(time);
+            drawStillnessMotes();
     drawTrail(time);
     drawConstellationLines(time);
     drawStarConnections(time);
@@ -7180,6 +7231,7 @@ body.meditation-mode #nav {
     updatePrimordialPulses(scaledDt);
     updateBreathMotes(scaledDt);
     updateJoyBubbles(scaledDt);
+            updateStillnessMotes();
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
