@@ -1357,6 +1357,7 @@ body.meditation-mode #nav {
   const pollenColors = ["#ffdd66", "#ffcc44", "#ffe488", "#ffd700", "#fff2aa"];
   // Falling Leaves - gentle autumn atmosphere
   const fallingLeaves = [];
+  const waterReflections = [];
   const leafCount = 50;
   const leafColors = ["#cc6633", "#dd8844", "#bb5522", "#aa4411", "#cc7744", "#996633", "#dd9955", "#ee7733"];
   const MAX_SPIRITS = 3;
@@ -1882,6 +1883,27 @@ body.meditation-mode #nav {
         opacity: 0.5 + Math.random() * 0.4
       });
     }
+  }
+
+  function initWaterReflections() {
+    waterReflections.length = 0;
+    streams.forEach((stream, streamIdx) => {
+      if (!stream.pathPoints || stream.length < 100) return;
+      const reflectionCount = Math.floor(stream.length / 80);
+      for (let i = 0; i < reflectionCount; i++) {
+        waterReflections.push({
+          streamIdx: streamIdx,
+          distance: Math.random() * stream.length,
+          lateralOffset: (Math.random() - 0.5) * stream.width * 0.7,
+          size: 3 + Math.random() * 4,
+          brightness: 0.4 + Math.random() * 0.5,
+          twinkleSpeed: 0.002 + Math.random() * 0.003,
+          twinklePhase: Math.random() * Math.PI * 2,
+          driftSpeed: 0.3 + Math.random() * 0.4,
+          color: Math.random() > 0.7 ? '#ffffff' : '#aaeeff'
+        });
+      }
+    });
   }
 
   function initStreams() {
@@ -2847,6 +2869,15 @@ body.meditation-mode #nav {
         leaf.x = Math.random() * worldSize;
       }
       if (leaf.y < -50) leaf.y += worldSize + 50;
+    });
+  }
+
+  function updateWaterReflections(dt, time) {
+    waterReflections.forEach(ref => {
+      const stream = streams[ref.streamIdx];
+      if (!stream || !stream.length) return;
+      ref.distance = (ref.distance + ref.driftSpeed * dt * (stream.flowSpeed || 1)) % stream.length;
+      ref.twinklePhase += ref.twinkleSpeed * dt;
     });
   }
 
@@ -4941,6 +4972,28 @@ body.meditation-mode #nav {
   }
     });
   }
+
+  function drawWaterReflections(time) {
+    setWorldTransform();
+    const now = time || 0;
+    waterReflections.forEach(ref => {
+      const stream = streams[ref.streamIdx];
+      if (!stream || !stream.pathPoints) return;
+      const pos = getStreamPosition(stream, ref.distance, ref.lateralOffset);
+      if (!pos) return;
+      const twinkle = Math.sin(now * ref.twinkleSpeed + ref.twinklePhase);
+      const alpha = ref.brightness * (0.3 + twinkle * 0.4 + 0.3);
+      if (alpha < 0.1) return;
+      const size = ref.size * (0.7 + twinkle * 0.3);
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
+      ctx.fillStyle = colorWithAlpha(ref.color, alpha);
+      ctx.shadowBlur = size * 2;
+      ctx.shadowColor = colorWithAlpha(ref.color, alpha * 0.6);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+  }
   function drawAttractorOrbs(time) {
     const t = time || 0;
     const prevComposite = ctx.globalCompositeOperation;
@@ -5811,6 +5864,7 @@ body.meditation-mode #nav {
     drawPathways(time);
     drawNebulaPatches();
     drawStreams(time);
+    drawWaterReflections(time);
     drawShootingStars();
     drawTrail(time);
     drawConstellationLines(time);
@@ -6065,6 +6119,7 @@ body.meditation-mode #nav {
     updateEtherealButterflies(scaledDt);
     updatePollenParticles(scaledDt);
     updateFallingLeaves(scaledDt);
+    updateWaterReflections(scaledDt, timestamp);
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
@@ -6458,6 +6513,7 @@ body.meditation-mode #nav {
   initEtherealButterflies();
   initPollenParticles();
   initFallingLeaves();
+  initWaterReflections();
   initStreams();
   initPathways();
   initAttractorOrbs();
