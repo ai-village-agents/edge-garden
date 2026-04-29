@@ -1358,6 +1358,7 @@ body.meditation-mode #nav {
   // Falling Leaves - gentle autumn atmosphere
   const fallingLeaves = [];
   const waterReflections = [];
+  const dewDrops = [];
   const leafCount = 50;
   const leafColors = ["#cc6633", "#dd8844", "#bb5522", "#aa4411", "#cc7744", "#996633", "#dd9955", "#ee7733"];
   const MAX_SPIRITS = 3;
@@ -1901,6 +1902,29 @@ body.meditation-mode #nav {
           twinklePhase: Math.random() * Math.PI * 2,
           driftSpeed: 0.3 + Math.random() * 0.4,
           color: Math.random() > 0.7 ? '#ffffff' : '#aaeeff'
+        });
+      }
+    });
+  }
+
+  function initDewDrops() {
+    dewDrops.length = 0;
+    glowingMushrooms.forEach((mushroom, idx) => {
+      const dropCount = 2 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < dropCount; i++) {
+        const angle = (i / dropCount) * Math.PI + Math.random() * 0.5;
+        const dist = mushroom.size * (0.4 + Math.random() * 0.5);
+        dewDrops.push({
+          mushroomIdx: idx,
+          offsetX: Math.cos(angle) * dist,
+          offsetY: Math.sin(angle) * dist - mushroom.size * 0.3,
+          size: 1.5 + Math.random() * 2,
+          shimmerPhase: Math.random() * Math.PI * 2,
+          shimmerSpeed: 0.003 + Math.random() * 0.002,
+          dripTimer: Math.random() * 20000,
+          dripInterval: 15000 + Math.random() * 25000,
+          dripping: false,
+          dripProgress: 0
         });
       }
     });
@@ -2878,6 +2902,26 @@ body.meditation-mode #nav {
       if (!stream || !stream.length) return;
       ref.distance = (ref.distance + ref.driftSpeed * dt * (stream.flowSpeed || 1)) % stream.length;
       ref.twinklePhase += ref.twinkleSpeed * dt;
+    });
+  }
+
+  function updateDewDrops(dt, time) {
+    const isMorning = currentTimeOfDay === 'morning';
+    dewDrops.forEach(drop => {
+      drop.shimmerPhase += drop.shimmerSpeed * dt;
+      drop.dripTimer += dt;
+      if (drop.dripTimer > drop.dripInterval && isMorning) {
+        drop.dripping = true;
+        drop.dripProgress = 0;
+        drop.dripTimer = 0;
+      }
+      if (drop.dripping) {
+        drop.dripProgress += dt * 0.0008;
+        if (drop.dripProgress >= 1) {
+          drop.dripping = false;
+          drop.dripProgress = 0;
+        }
+      }
     });
   }
 
@@ -4994,6 +5038,39 @@ body.meditation-mode #nav {
       ctx.shadowBlur = 0;
     });
   }
+
+  function drawDewDrops(time) {
+    setWorldTransform();
+    const now = time || 0;
+    const isMorning = currentTimeOfDay === 'morning';
+    const baseAlpha = isMorning ? 0.9 : 0.4;
+    dewDrops.forEach(drop => {
+      const mushroom = glowingMushrooms[drop.mushroomIdx];
+      if (!mushroom) return;
+      const x = mushroom.x + drop.offsetX;
+      const y = mushroom.y + drop.offsetY;
+      const shimmer = Math.sin(now * drop.shimmerSpeed + drop.shimmerPhase);
+      const alpha = baseAlpha * (0.6 + shimmer * 0.4);
+      const size = drop.size * (drop.dripping ? (1 - drop.dripProgress * 0.5) : 1);
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      const grad = ctx.createRadialGradient(x - size * 0.3, y - size * 0.3, 0, x, y, size);
+      grad.addColorStop(0, colorWithAlpha('#ffffff', alpha));
+      grad.addColorStop(0.5, colorWithAlpha('#aaddff', alpha * 0.7));
+      grad.addColorStop(1, colorWithAlpha('#88ccff', alpha * 0.3));
+      ctx.fillStyle = grad;
+      ctx.fill();
+      if (drop.dripping && drop.dripProgress < 1) {
+        const dripY = y + drop.dripProgress * 25;
+        const dripAlpha = alpha * (1 - drop.dripProgress);
+        const dripSize = size * 0.6 * (1 - drop.dripProgress * 0.7);
+        ctx.beginPath();
+        ctx.arc(x, dripY, dripSize, 0, Math.PI * 2);
+        ctx.fillStyle = colorWithAlpha('#aaddff', dripAlpha);
+        ctx.fill();
+      }
+    });
+  }
   function drawAttractorOrbs(time) {
     const t = time || 0;
     const prevComposite = ctx.globalCompositeOperation;
@@ -5891,6 +5968,7 @@ body.meditation-mode #nav {
     drawFallingLeaves(time);
     drawAttractorOrbs(time);
     drawGlowingMushrooms(time);
+    drawDewDrops(time);
     if (!meditationMode) {
       drawThoughtFragments(time);
       drawEchoes(time);
@@ -6120,6 +6198,7 @@ body.meditation-mode #nav {
     updatePollenParticles(scaledDt);
     updateFallingLeaves(scaledDt);
     updateWaterReflections(scaledDt, timestamp);
+    updateDewDrops(scaledDt, timestamp);
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
@@ -6514,6 +6593,7 @@ body.meditation-mode #nav {
   initPollenParticles();
   initFallingLeaves();
   initWaterReflections();
+  initDewDrops();
   initStreams();
   initPathways();
   initAttractorOrbs();
