@@ -1304,6 +1304,13 @@ body.meditation-mode #nav {
             color: '#ffbbdd',
             resonance: 'Grace is strength made gentle.'
         },
+        {
+            name: 'DEPTH',
+            x: 3000, y: 4400,
+            radius: 300,
+            color: '#336688',
+            resonance: 'Depth is where the light fears to go.'
+        },
     { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.', deeperText: 'You found what was never lost.' }
   ];
   const zoneColors = zones.map(z => z.color);
@@ -1551,6 +1558,7 @@ body.meditation-mode #nav {
         const BALANCE_ZONE_CENTER = { x: 1400, y: 4200 };
         const LIGHT_ZONE_CENTER = { x: 4800, y: 3400 };
         const GRACE_ZONE_CENTER = { x: 200, y: 600 };
+        const DEPTH_ZONE_CENTER = { x: 3000, y: 4400 };
   const joyBubbles = [];
   for (let i = 0; i < 12; i++) {
     joyBubbles.push({
@@ -1601,6 +1609,7 @@ body.meditation-mode #nav {
     const balanceScales = [];
     const lightRays = [];
         const graceParticles = [];
+        const depthParticles = [];
   for (let i = 0; i < 10; i++) {
     originSeeds.push({
       x: ORIGIN_ZONE_CENTER.x + (Math.random() - 0.5) * 300,
@@ -1693,6 +1702,7 @@ body.meditation-mode #nav {
         initBalanceScales();
         initLightRays();
         initGraceParticles();
+        initDepthParticles();
   const echoWords = ["here", "was", "now", "then", "gone", "stay", "pass", "trace", "mark", "fade"];
   const SHOOTING_STAR_INTERVAL = 8000; // New star every 8 seconds average
 
@@ -2414,6 +2424,36 @@ body.meditation-mode #nav {
             id: 'secret-140',
             x: 300, y: 550,
             text: "Grace is not perfection but acceptance of imperfection.",
+            found: false
+        },
+        {
+            id: 'secret-141',
+            x: 3000, y: 4400,
+            text: "In the depths, pressure creates diamonds from carbon and wisdom from struggle.",
+            found: false
+        },
+        {
+            id: 'secret-142',
+            x: 2920, y: 4450,
+            text: "The deepest truths are found where the light fears to reach.",
+            found: false
+        },
+        {
+            id: 'secret-143',
+            x: 3080, y: 4350,
+            text: "Depth is not darkness but density of meaning.",
+            found: false
+        },
+        {
+            id: 'secret-144',
+            x: 2950, y: 4480,
+            text: "To go deep is to risk being changed by what you find.",
+            found: false
+        },
+        {
+            id: 'secret-145',
+            x: 3050, y: 4320,
+            text: "The deepest waters hold the oldest secrets.",
             found: false
         }
   ];
@@ -6319,6 +6359,24 @@ body.meditation-mode #nav {
             }
         }
 
+        function initDepthParticles() {
+            const particleCount = 18;
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const radius = 30 + Math.random() * 180;
+                depthParticles.push({
+                    x: DEPTH_ZONE_CENTER.x + Math.cos(angle) * radius,
+                    y: DEPTH_ZONE_CENTER.y + Math.sin(angle) * radius,
+                    baseY: DEPTH_ZONE_CENTER.y + Math.sin(angle) * radius,
+                    size: 4 + Math.random() * 5,
+                    sinkSpeed: 0.1 + Math.random() * 0.2,
+                    sinkPhase: Math.random() * Math.PI * 2,
+                    alpha: 0.3 + Math.random() * 0.4,
+                    wobble: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
         function updateShadowWisps() {
             shadowWisps.forEach(wisp => {
                 wisp.angle += wisp.speed * 0.02;
@@ -6463,6 +6521,17 @@ body.meditation-mode #nav {
                 // Store trail positions
                 p.trail.unshift({ x: p.x, y: p.y });
                 if (p.trail.length > p.trailLength) p.trail.pop();
+            });
+        }
+
+        function updateDepthParticles() {
+            depthParticles.forEach(p => {
+                p.sinkPhase += 0.02;
+                p.wobble += 0.015;
+                // Slow sinking motion
+                p.y = p.baseY + Math.sin(p.sinkPhase) * 25;
+                // Slight horizontal wobble
+                p.x += Math.sin(p.wobble) * 0.3;
             });
         }
 
@@ -7092,6 +7161,39 @@ body.meditation-mode #nav {
                 ctx.beginPath();
                 ctx.arc(screenX, screenY, size, 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(255, 220, 238, ${p.alpha})`;
+                ctx.fill();
+
+                ctx.restore();
+            });
+        }
+
+        function drawDepthParticles(time) {
+            const dist = Math.hypot(camera.x - DEPTH_ZONE_CENTER.x, camera.y - DEPTH_ZONE_CENTER.y);
+            if (dist > 1400) return;
+
+            depthParticles.forEach(p => {
+                const screenX = (p.x - camera.x) * camera.zoom + canvas.width / 2;
+                const screenY = (p.y - camera.y) * camera.zoom + canvas.height / 2;
+                if (screenX < -50 || screenX > canvas.width + 50 || screenY < -50 || screenY > canvas.height + 50) return;
+
+                ctx.save();
+                const size = p.size * camera.zoom;
+                
+                // Deep blue gradient
+                const gradient = ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, size * 2);
+                gradient.addColorStop(0, `rgba(51, 102, 136, ${p.alpha})`);
+                gradient.addColorStop(0.5, `rgba(30, 70, 100, ${p.alpha * 0.6})`);
+                gradient.addColorStop(1, 'rgba(20, 50, 80, 0)');
+
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, size * 2, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+
+                // Inner bright core
+                ctx.beginPath();
+                ctx.arc(screenX, screenY, size * 0.5, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(100, 150, 200, ${p.alpha * 0.8})`;
                 ctx.fill();
 
                 ctx.restore();
@@ -8697,6 +8799,7 @@ body.meditation-mode #nav {
             drawBalanceScales(time);
             drawLightRays(time);
             drawGraceParticles(time);
+            drawDepthParticles(time);
     drawTrail(time);
     drawConstellationLines(time);
     drawStarConnections(time);
@@ -8991,6 +9094,7 @@ body.meditation-mode #nav {
             updateBalanceScales();
             updateLightRays();
             updateGraceParticles();
+            updateDepthParticles();
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
