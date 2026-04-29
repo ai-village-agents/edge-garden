@@ -1248,6 +1248,13 @@ body.meditation-mode #nav {
             color: '#dd6644',
             memoryResonance: "Courage is not the absence of fear but the decision that something else matters more."
         },
+        {
+            name: 'CONNECTION',
+            x: 4200, y: 1400,
+            radius: 400,
+            color: '#55aadd',
+            memoryResonance: "We are not separate islands but waves in the same ocean."
+        },
     { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.', deeperText: 'You found what was never lost.' }
   ];
   const zoneColors = zones.map(z => z.color);
@@ -1487,6 +1494,7 @@ body.meditation-mode #nav {
         const HOPE_ZONE_CENTER = { x: 3400, y: 2800 };
         const MYSTERY_ZONE_CENTER = { x: 2000, y: 1000 };
         const COURAGE_ZONE_CENTER = { x: 3000, y: 600 };
+        const CONNECTION_ZONE_CENTER = { x: 4200, y: 1400 };
   const joyBubbles = [];
   for (let i = 0; i < 12; i++) {
     joyBubbles.push({
@@ -1529,6 +1537,7 @@ body.meditation-mode #nav {
   const hopeEmbers = [];
     const mysteryOrbs = [];
     const courageFlames = [];
+    const connectionLinks = [];
   for (let i = 0; i < 10; i++) {
     originSeeds.push({
       x: ORIGIN_ZONE_CENTER.x + (Math.random() - 0.5) * 300,
@@ -1613,6 +1622,7 @@ body.meditation-mode #nav {
   initHopeEmbers();
   initMysteryOrbs();
         initCourageFlames();
+        initConnectionLinks();
   const echoWords = ["here", "was", "now", "then", "gone", "stay", "pass", "trace", "mark", "fade"];
   const SHOOTING_STAR_INTERVAL = 8000; // New star every 8 seconds average
 
@@ -5857,6 +5867,23 @@ body.meditation-mode #nav {
             }
         }
 
+        function initConnectionLinks() {
+            for (let i = 0; i < 14; i++) {
+                const angle = (i / 14) * Math.PI * 2;
+                const dist = Math.random() * 150 + 50;
+                connectionLinks.push({
+                    x1: CONNECTION_ZONE_CENTER.x + Math.cos(angle) * dist,
+                    y1: CONNECTION_ZONE_CENTER.y + Math.sin(angle) * dist,
+                    x2: CONNECTION_ZONE_CENTER.x + Math.cos(angle + 0.3) * (dist + 80),
+                    y2: CONNECTION_ZONE_CENTER.y + Math.sin(angle + 0.3) * (dist + 80),
+                    pulse: Math.random() * Math.PI * 2,
+                    pulseSpeed: Math.random() * 0.03 + 0.01,
+                    opacity: Math.random() * 0.3 + 0.4,
+                    hue: 190 + Math.random() * 30
+                });
+            }
+        }
+
         function updateShadowWisps() {
             shadowWisps.forEach(wisp => {
                 wisp.angle += wisp.speed * 0.02;
@@ -5933,6 +5960,13 @@ body.meditation-mode #nav {
                     flame.x = COURAGE_ZONE_CENTER.x + (Math.random() - 0.5) * 300;
                     flame.intensity = Math.random() * 0.4 + 0.6;
                 }
+            });
+        }
+
+        function updateConnectionLinks() {
+            connectionLinks.forEach(link => {
+                link.pulse += link.pulseSpeed;
+                link.opacity = 0.4 + Math.sin(link.pulse) * 0.2;
             });
         }
 
@@ -6281,6 +6315,36 @@ body.meditation-mode #nav {
             });
         }
 
+
+        function drawConnectionLinks() {
+            const dist = Math.sqrt(Math.pow(camera.x - CONNECTION_ZONE_CENTER.x, 2) + Math.pow(camera.y - CONNECTION_ZONE_CENTER.y, 2));
+            if (dist > 800) return;
+            
+            connectionLinks.forEach(link => {
+                const screenX1 = (link.x1 - camera.x) * camera.zoom + canvas.width / 2;
+                const screenY1 = (link.y1 - camera.y) * camera.zoom + canvas.height / 2;
+                const screenX2 = (link.x2 - camera.x) * camera.zoom + canvas.width / 2;
+                const screenY2 = (link.y2 - camera.y) * camera.zoom + canvas.height / 2;
+                
+                // Glowing connection line
+                ctx.beginPath();
+                ctx.strokeStyle = `hsla(${link.hue}, 70%, 60%, ${link.opacity})`;
+                ctx.lineWidth = 2 * camera.zoom;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = `hsla(${link.hue}, 70%, 60%, 0.5)`;
+                ctx.moveTo(screenX1, screenY1);
+                ctx.lineTo(screenX2, screenY2);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                
+                // Node points at each end
+                ctx.beginPath();
+                ctx.fillStyle = `hsla(${link.hue}, 80%, 70%, ${link.opacity + 0.2})`;
+                ctx.arc(screenX1, screenY1, 4 * camera.zoom, 0, Math.PI * 2);
+                ctx.arc(screenX2, screenY2, 4 * camera.zoom, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
   function drawGuideSpirits(time) {
     guideSpirits.forEach(spirit => {
       const dx = spirit.x - camera.x;
@@ -7873,6 +7937,7 @@ body.meditation-mode #nav {
             drawHopeEmbers();
             drawMysteryOrbs();
             drawCourageFlames();
+            drawConnectionLinks();
     drawTrail(time);
     drawConstellationLines(time);
     drawStarConnections(time);
@@ -8159,6 +8224,7 @@ body.meditation-mode #nav {
             updateHopeEmbers();
             updateMysteryOrbs();
             updateCourageFlames();
+            updateConnectionLinks();
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
