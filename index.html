@@ -824,6 +824,38 @@ body.meditation-mode #nav {
   font-size: 14px;
   opacity: 0.8;
 }
+.spirit-wisdom {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(10, 10, 20, 0.95);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  padding: 30px 40px;
+  text-align: center;
+  z-index: 2000;
+  animation: spiritFadeIn 0.5s ease-out;
+  transition: opacity 1s ease-out;
+  max-width: 400px;
+}
+.spirit-name {
+  font-size: 18px;
+  color: #aaddff;
+  margin-bottom: 15px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.spirit-message {
+  font-size: 16px;
+  color: #e0e0e0;
+  font-style: italic;
+  line-height: 1.6;
+}
+@keyframes spiritFadeIn {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
 </style>
 </head>
 <body>
@@ -1432,6 +1464,15 @@ body.meditation-mode #nav {
     { x: 3400, y: 4600, text: 'in the space before words', collected: false },
     { x: 1800, y: 600, text: 'for the right silence', collected: false }
   ];
+  const guideSpirits = [
+    { id: 'spirit-seeker', name: 'The Seeker', x: 1200, y: 1200, wisdom: 'Every path you don\'t take still shapes the one you do.', color: '#88ffcc', encountered: false },
+    { id: 'spirit-keeper', name: 'The Keeper', x: 3800, y: 1000, wisdom: 'What we remember chooses us, not the other way around.', color: '#ffcc88', encountered: false },
+    { id: 'spirit-wanderer', name: 'The Wanderer', x: 4200, y: 4000, wisdom: 'The edge you fear is often the beginning you seek.', color: '#cc88ff', encountered: false },
+    { id: 'spirit-listener', name: 'The Listener', x: 800, y: 4200, wisdom: 'In the silence between thoughts, the garden grows.', color: '#88ccff', encountered: false },
+    { id: 'spirit-dreamer', name: 'The Dreamer', x: 2500, y: 1800, wisdom: 'What emerges from forgetting is more real than memory.', color: '#ff88cc', encountered: false }
+  ];
+  let encounteredSpirits = [];
+  const spiritsStorageKey = 'edge-garden-spirits';
   const glowingMushrooms = createGlowingMushrooms(20);
   let discoveredMonuments = [];
   let discoveredRuins = [];
@@ -2147,6 +2188,15 @@ body.meditation-mode #nav {
     localStorage.setItem(thoughtFragmentsStorageKey, JSON.stringify(collected));
   }
 
+  function loadEncounteredSpirits() {
+    const storedSpirits = localStorage.getItem(spiritsStorageKey);
+    if (storedSpirits) {
+      try {
+        encounteredSpirits = JSON.parse(storedSpirits);
+      } catch (e) {}
+    }
+  }
+
   function showMemoryOverlay(message) {
     if (!memoryOverlay) return;
     memoryOverlay.textContent = message;
@@ -2658,6 +2708,34 @@ body.meditation-mode #nav {
       const dist = Math.hypot(camera.x - w.x, camera.y - w.y);
       if (dist <= 100) wispsEncountered.add(i);
     });
+  }
+
+  function checkGuideSpirits() {
+    const playerX = camera.x;
+    const playerY = camera.y;
+
+    guideSpirits.forEach(spirit => {
+      const dx = spirit.x - playerX;
+      const dy = spirit.y - playerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 80 && !encounteredSpirits.includes(spirit.id)) {
+        encounteredSpirits.push(spirit.id);
+        localStorage.setItem(spiritsStorageKey, JSON.stringify(encounteredSpirits));
+        showSpiritWisdom(spirit);
+      }
+    });
+  }
+
+  function showSpiritWisdom(spirit) {
+    const wisdomDiv = document.createElement('div');
+    wisdomDiv.className = 'spirit-wisdom';
+    wisdomDiv.innerHTML = '<div class="spirit-name">' + spirit.name + '</div><div class="spirit-message">"' + spirit.wisdom + '"</div>';
+    document.body.appendChild(wisdomDiv);
+    setTimeout(() => {
+      wisdomDiv.style.opacity = '0';
+      setTimeout(() => wisdomDiv.remove(), 1000);
+    }, 5000);
   }
 
   function initMemoryWellParticles() {
@@ -4130,6 +4208,51 @@ body.meditation-mode #nav {
     ctx.shadowBlur = 0;
   }
 
+  function drawGuideSpirits(time) {
+    guideSpirits.forEach(spirit => {
+      const dx = spirit.x - camera.x;
+      const dy = spirit.y - camera.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // Pulsing glow effect
+      const pulse = 0.6 + 0.4 * Math.sin(time * 0.002 + spirit.x * 0.01);
+      const size = 18 + 6 * pulse;
+
+      // Outer glow
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = spirit.color;
+      ctx.globalAlpha = 0.3 * pulse;
+      ctx.fillStyle = spirit.color;
+      ctx.beginPath();
+      ctx.arc(spirit.x, spirit.y, size * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner core
+      ctx.globalAlpha = 0.7 + 0.3 * pulse;
+      ctx.beginPath();
+      ctx.arc(spirit.x, spirit.y, size, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Center bright spot
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(spirit.x, spirit.y, size * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+
+      // Show name when close
+      if (dist < 200) {
+        ctx.font = '14px Georgia, serif';
+        ctx.fillStyle = spirit.color;
+        ctx.textAlign = 'center';
+        ctx.fillText(spirit.name, spirit.x, spirit.y - size - 15);
+      }
+    });
+  }
+
   function drawSpirits(time) {
     if (!spiritCompanions.length) return;
     setWorldTransform();
@@ -5052,6 +5175,7 @@ body.meditation-mode #nav {
     drawRipples(time);
     drawPortals(time);
     drawWisps();
+    drawGuideSpirits(time);
     drawSpirits(time);
     drawCreatures();
     drawAttractorOrbs(time);
@@ -5285,6 +5409,7 @@ body.meditation-mode #nav {
     updateSpirits(scaledDt, timestamp);
     updateMemoryWell(scaledDt);
     updateWispEncounters();
+    checkGuideSpirits();
     updateZonePresence();
     updateShootingStars(scaledDt, timestamp);
     updateSecrets();
@@ -5649,6 +5774,7 @@ body.meditation-mode #nav {
   loadMemoryStars();
   loadMemoryWellDiscovery();
   loadThoughtFragments();
+  loadEncounteredSpirits();
   loadStats();
   loadKonamiUnlock();
   loadMeditationPreference();
