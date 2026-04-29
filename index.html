@@ -1424,6 +1424,19 @@ body.meditation-mode #nav {
     { text: "wonder...", x: 800, y: 2800, vx: 0.25, vy: 0.05, alpha: 0.38 },
     { text: "breathe...", x: 4200, y: 1200, vx: -0.15, vy: 0.18, alpha: 0.42 }
   ];
+  // Ambient Whispers - sound descriptions that appear near garden features
+  const ambientWhispers = [
+    { x: 1900, y: 900, sound: "~water trickling~", zone: "stream" },
+    { x: 2800, y: 3400, sound: "~leaves rustling~", zone: "forest" },
+    { x: 1200, y: 1600, sound: "~wind sighing~", zone: "open" },
+    { x: 3600, y: 2800, sound: "~crystals humming~", zone: "crystal" },
+    { x: 4000, y: 1200, sound: "~distant chimes~", zone: "monument" },
+    { x: 800, y: 4000, sound: "~soft breathing~", zone: "mushroom" },
+    { x: 2500, y: 2500, sound: "~deep resonance~", zone: "center" },
+    { x: 3200, y: 4000, sound: "~memories stirring~", zone: "memory" },
+    { x: 700, y: 2700, sound: "~profound stillness~", zone: "silence" },
+    { x: 3800, y: 800, sound: "~echoes returning~", zone: "echo" }
+  ];
   const swarmCount = 8;
   const swarmColors = ["#ffffaa", "#aaffaa", "#ffff88", "#ccffcc", "#ffffcc", "#88ff88", "#ffee99", "#aaffcc"];
   
@@ -5454,6 +5467,27 @@ body.meditation-mode #nav {
     });
   }
 
+  function drawAmbientWhispers() {
+    ambientWhispers.forEach(whisper => {
+      const screenX = (whisper.x - camera.x) * camera.zoom + canvas.width / 2;
+      const screenY = (whisper.y - camera.y) * camera.zoom + canvas.height / 2;
+      const dist = Math.hypot(whisper.x - camera.x, whisper.y - camera.y);
+      if (screenX > -200 && screenX < canvas.width + 200 && screenY > -100 && screenY < canvas.height + 100 && dist < 600) {
+        ctx.save();
+        const proximityAlpha = Math.max(0, 1 - dist / 600) * 0.5;
+        ctx.globalAlpha = proximityAlpha;
+        ctx.font = "italic " + (14 * camera.zoom) + "px Georgia, serif";
+        ctx.fillStyle = "#88aacc";
+        ctx.shadowColor = "#446688";
+        ctx.shadowBlur = 8 * camera.zoom;
+        ctx.textAlign = "center";
+        const bobY = Math.sin(Date.now() * 0.001 + whisper.x * 0.01) * 5;
+        ctx.fillText(whisper.sound, screenX, screenY + bobY);
+        ctx.restore();
+      }
+    });
+  }
+
   function updateReflectionRipples() {
     reflectionRipples.forEach(ripple => {
       ripple.radius += ripple.speed;
@@ -6466,6 +6500,7 @@ body.meditation-mode #nav {
     drawDewDrops(time);
     drawWindParticles();
     drawThoughtBubbles();
+    drawAmbientWhispers();
     drawReflectionRipples();
     drawShootingStars();
     if (!meditationMode) {
