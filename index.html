@@ -1385,6 +1385,22 @@ body.meditation-mode #nav {
   const memoryWisps = [];
   const WISP_COUNT = 20;
   const MEMORY_ZONE_CENTER = { x: 3200, y: 4000 };
+  const BECOMING_ZONE_CENTER = { x: 4400, y: 3800 };
+  
+  // Transformation Sparks - particles that shift colors in the BECOMING zone
+  const transformationSparks = [];
+  for (let i = 0; i < 15; i++) {
+    transformationSparks.push({
+      x: BECOMING_ZONE_CENTER.x + (Math.random() - 0.5) * 400,
+      y: BECOMING_ZONE_CENTER.y + (Math.random() - 0.5) * 400,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      hue: Math.random() * 360,
+      hueSpeed: 0.5 + Math.random() * 1.5,
+      size: 2 + Math.random() * 3,
+      alpha: 0.4 + Math.random() * 0.4
+    });
+  }
   const MEMORY_ZONE_RADIUS = 400;
   function initMemoryWisps() {
     const wispWords = ["was", "once", "ago", "then", "lost", "found", "knew", "felt", "dreamed", "forgot"];
@@ -4901,6 +4917,76 @@ body.meditation-mode #nav {
     ctx.shadowBlur = 0;
   }
 
+
+  // Update transformation sparks - color-shifting particles in BECOMING zone
+  function updateTransformationSparks(dt) {
+    transformationSparks.forEach(spark => {
+      // Move in gentle spiraling patterns
+      spark.x += spark.vx * dt * 60;
+      spark.y += spark.vy * dt * 60;
+      
+      // Shift hue continuously
+      spark.hue = (spark.hue + spark.hueSpeed * dt * 60) % 360;
+      
+      // Gradually change alpha
+      spark.alpha += (Math.random() - 0.5) * 0.02;
+      spark.alpha = Math.max(0.3, Math.min(0.9, spark.alpha));
+      
+      // Keep within BECOMING zone bounds
+      const dx = spark.x - BECOMING_ZONE_CENTER.x;
+      const dy = spark.y - BECOMING_ZONE_CENTER.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 250) {
+        // Gently pull back toward center
+        spark.vx -= dx * 0.001;
+        spark.vy -= dy * 0.001;
+      }
+      
+      // Add slight randomness to velocity
+      spark.vx += (Math.random() - 0.5) * 0.05;
+      spark.vy += (Math.random() - 0.5) * 0.05;
+      
+      // Dampen velocity
+      spark.vx *= 0.98;
+      spark.vy *= 0.98;
+    });
+  }
+
+  // Draw transformation sparks with rainbow color shifting
+  function drawTransformationSparks(time) {
+    transformationSparks.forEach(spark => {
+      const screenX = (spark.x - camera.x) * camera.zoom + canvas.width / 2;
+      const screenY = (spark.y - camera.y) * camera.zoom + canvas.height / 2;
+      if (screenX < -50 || screenX > canvas.width + 50 || screenY < -50 || screenY > canvas.height + 50) return;
+      
+      const pulse = 0.7 + 0.3 * Math.sin(time * 0.005 + spark.hue * 0.1);
+      const size = spark.size * pulse * camera.zoom;
+      
+      ctx.save();
+      ctx.globalAlpha = spark.alpha * pulse;
+      
+      // Color from hue
+      const color = "hsl(" + spark.hue + ", 80%, 65%)";
+      ctx.fillStyle = color;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 15 * camera.zoom;
+      
+      // Draw spark as small glowing circle
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, size, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Inner bright core
+      ctx.globalAlpha = spark.alpha * pulse * 0.8;
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, size * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.restore();
+    });
+  }
+
   function drawGuideSpirits(time) {
     guideSpirits.forEach(spirit => {
       const dx = spirit.x - camera.x;
@@ -6477,6 +6563,7 @@ body.meditation-mode #nav {
     drawMovementEchoes();
     drawWanderingLanterns(time);
     drawMemoryWisps(time);
+    drawTransformationSparks(time);
     drawTrail(time);
     drawConstellationLines(time);
     drawStarConnections(time);
@@ -6747,6 +6834,7 @@ body.meditation-mode #nav {
     updateMovementEchoes();
     updateWanderingLanterns(scaledDt);
     updateMemoryWisps(scaledDt);
+    updateTransformationSparks(scaledDt);
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
