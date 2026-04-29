@@ -1361,6 +1361,8 @@ body.meditation-mode #nav {
   const maxShootingStars = 3;
   let windEnabled = true;
   const wind = {
+    x: 0,
+    y: 0,
     direction: Math.random() * Math.PI * 2,
     strength: 0.3 + Math.random() * 0.4,
     gustTimer: 0
@@ -3178,6 +3180,8 @@ body.meditation-mode #nav {
     const speed = wind.strength * 14;
     const dx = Math.cos(wind.direction) * speed;
     const dy = Math.sin(wind.direction) * speed;
+    wind.x = dx;
+    wind.y = dy;
     return { dx, dy };
   }
 
