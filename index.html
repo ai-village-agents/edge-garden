@@ -1361,6 +1361,23 @@ body.meditation-mode #nav {
 
   // Movement Echo Whispers - fading text that appears as player moves
   const movementEchoes = [];
+  const wanderingLanterns = [];
+  const LANTERN_COUNT = 15;
+  function initWanderingLanterns() {
+    for (let i = 0; i < LANTERN_COUNT; i++) {
+      wanderingLanterns.push({
+        x: Math.random() * 5000,
+        y: Math.random() * 5000,
+        vx: (Math.random() - 0.5) * 20,
+        vy: (Math.random() - 0.5) * 20,
+        size: 4 + Math.random() * 6,
+        color: ["#ffdd88", "#ff9966", "#88ddff", "#aaffaa", "#ffaacc"][Math.floor(Math.random() * 5)],
+        pulseOffset: Math.random() * Math.PI * 2,
+        brightness: 0.6 + Math.random() * 0.4
+      });
+    }
+  }
+  initWanderingLanterns();
   let lastEchoTime = 0;
   const echoWords = ["here", "was", "now", "then", "gone", "stay", "pass", "trace", "mark", "fade"];
   const SHOOTING_STAR_INTERVAL = 8000; // New star every 8 seconds average
@@ -4716,6 +4733,52 @@ body.meditation-mode #nav {
       ctx.restore();
     });
   }
+  function updateWanderingLanterns(dt) {
+    wanderingLanterns.forEach(lantern => {
+      lantern.x += lantern.vx * dt / 1000;
+      lantern.y += lantern.vy * dt / 1000;
+      // Gentle direction changes
+      lantern.vx += (Math.random() - 0.5) * 2;
+      lantern.vy += (Math.random() - 0.5) * 2;
+      // Limit speed
+      const speed = Math.hypot(lantern.vx, lantern.vy);
+      if (speed > 30) {
+        lantern.vx = lantern.vx / speed * 30;
+        lantern.vy = lantern.vy / speed * 30;
+      }
+      // Wrap around world edges
+      if (lantern.x < 0) lantern.x = 5000;
+      if (lantern.x > 5000) lantern.x = 0;
+      if (lantern.y < 0) lantern.y = 5000;
+      if (lantern.y > 5000) lantern.y = 0;
+    });
+  }
+  function drawWanderingLanterns(time) {
+    wanderingLanterns.forEach(lantern => {
+      const screenX = (lantern.x - camera.x) * camera.zoom + canvas.width / 2;
+      const screenY = (lantern.y - camera.y) * camera.zoom + canvas.height / 2;
+      if (screenX < -50 || screenX > canvas.width + 50 || screenY < -50 || screenY > canvas.height + 50) return;
+      const pulse = 0.7 + 0.3 * Math.sin(time * 0.002 + lantern.pulseOffset);
+      ctx.save();
+      ctx.globalAlpha = lantern.brightness * pulse;
+      // Outer glow
+      const gradient = ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, lantern.size * 3 * camera.zoom);
+      gradient.addColorStop(0, lantern.color);
+      gradient.addColorStop(0.5, lantern.color + "44");
+      gradient.addColorStop(1, "transparent");
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, lantern.size * 3 * camera.zoom, 0, Math.PI * 2);
+      ctx.fill();
+      // Inner core
+      ctx.globalAlpha = lantern.brightness;
+      ctx.fillStyle = lantern.color;
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, lantern.size * camera.zoom, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+  }
     wisps.forEach(w => {
       const rgbColor = colorWithAlpha(w.color, w.alpha);
       w.trail.forEach((p, idx) => {
@@ -6252,6 +6315,7 @@ body.meditation-mode #nav {
     drawWaterReflections(time);
     drawShootingStars();
     drawMovementEchoes();
+    drawWanderingLanterns(time);
     drawTrail(time);
     drawConstellationLines(time);
     drawStarConnections(time);
@@ -6518,6 +6582,7 @@ body.meditation-mode #nav {
     updateReflectionRipples();
     updateShootingStars(Date.now());
     updateMovementEchoes();
+    updateWanderingLanterns(scaledDt);
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
