@@ -5062,6 +5062,9 @@ body.meditation-mode #nav {
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
       ctx.fill();
 
+    });
+  }
+
   function drawFallingLeaves(time) {
     const viewW = width / camera.zoom;
     const viewH = height / camera.zoom;
@@ -5102,8 +5105,6 @@ body.meditation-mode #nav {
       ctx.stroke();
       
       ctx.restore();
-    });
-  }
     });
   }
 
