@@ -4439,6 +4439,8 @@ body.meditation-mode #nav {
       ctx.arc(creature.x, creature.y, creature.size, 0, Math.PI * 2);
       ctx.fill();
 
+    });
+  }
   function drawFireflySwarms(time) {
     const viewW = width / camera.zoom;
     const viewH = height / camera.zoom;
@@ -4490,8 +4492,6 @@ body.meditation-mode #nav {
       });
     });
     ctx.shadowBlur = 0;
-  }
-    });
   }
 
 
