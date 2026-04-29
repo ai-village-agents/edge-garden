@@ -1175,6 +1175,7 @@ body.meditation-mode #nav {
     { name: 'MEMORY', x: 3200, y: 4000, color: '#ffaadd', description: 'Where echoes of the past surface', deeper: 'Memory is not storage but recreation. Each remembering changes what is remembered. Here, the garden remembers you remembering it.' },
     { name: 'BECOMING', x: 4400, y: 3800, color: '#ff77aa', description: 'Where transformation unfolds', deeper: 'Every edge is a becoming. What you were dissolves into what you might be. The garden watches your unfolding.' },
     { name: 'WONDER', x: 1800, y: 3200, color: '#ffdd44', description: 'Where awe takes root', deeper: 'Wonder is not ignorance but attention. The more you see, the more there is to see. Each discovery reveals deeper mysteries.' },
+    { name: 'ORIGIN', x: 3200, y: 1600, color: '#ff9933', description: 'Where all begins', deeper: 'Every ending circles back to origin. Every journey starts from the place you never truly left. Return is not regression but recognition.' },
     { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.', deeperText: 'You found what was never lost.' }
   ];
   const zoneColors = zones.map(z => z.color);
@@ -1420,6 +1421,22 @@ body.meditation-mode #nav {
       alpha: 0.5 + Math.random() * 0.3,
       glowIntensity: 0.7 + Math.random() * 0.3
     });
+
+  // ORIGIN zone - seeds of creation
+  const ORIGIN_ZONE_CENTER = { x: 3200, y: 1600 };
+  const originSeeds = [];
+  for (let i = 0; i < 10; i++) {
+    originSeeds.push({
+      x: ORIGIN_ZONE_CENTER.x + (Math.random() - 0.5) * 300,
+      y: ORIGIN_ZONE_CENTER.y + (Math.random() - 0.5) * 300,
+      size: 4 + Math.random() * 6,
+      angle: Math.random() * Math.PI * 2,
+      orbitRadius: 30 + Math.random() * 80,
+      orbitSpeed: 0.002 + Math.random() * 0.003,
+      pulseOffset: Math.random() * Math.PI * 2,
+      hue: 25 + Math.random() * 20
+    });
+  }
   }
     const wispWords = ["was", "once", "ago", "then", "lost", "found", "knew", "felt", "dreamed", "forgot"];
     for (let i = 0; i < WISP_COUNT; i++) {
@@ -1613,7 +1630,12 @@ body.meditation-mode #nav {
     { id: 'secret-42', x: 1900, y: 3100, text: 'To be astonished is to be awake' },
     { id: 'secret-43', x: 4800, y: 4500, text: 'The edge of the map is where the real journey begins' },
     { id: 'secret-44', x: 300, y: 300, text: 'Every corner holds a universe waiting to unfold' },
-    { id: 'secret-45', x: 2200, y: 500, text: 'What you seek is also seeking you' }
+    { id: 'secret-45', x: 2200, y: 500, text: 'What you seek is also seeking you' },
+    { id: 'secret-46', x: 3100, y: 1500, text: 'The origin is not behind you but beneath you' },
+    { id: 'secret-47', x: 3300, y: 1700, text: 'Every seed contains the memory of every tree that came before' },
+    { id: 'secret-48', x: 4700, y: 2500, text: 'The horizon moves with you because it is you' },
+    { id: 'secret-49', x: 500, y: 4700, text: 'In the garden of forking paths all choices lead home' },
+    { id: 'secret-50', x: 2500, y: 200, text: 'You have found the fiftieth secret: the garden remembers you' }
   ];
   const constellationStars = [
     { id: 'star-1', x: 320, y: 620, name: 'The Watcher', discovered: false },
@@ -5070,6 +5092,48 @@ body.meditation-mode #nav {
     });
   }
 
+  function updateOriginSeeds(dt) {
+    originSeeds.forEach(seed => {
+      seed.angle += seed.orbitSpeed * dt;
+      seed.x = ORIGIN_ZONE_CENTER.x + Math.cos(seed.angle) * seed.orbitRadius;
+      seed.y = ORIGIN_ZONE_CENTER.y + Math.sin(seed.angle) * seed.orbitRadius * 0.6;
+    });
+  }
+
+  function drawOriginSeeds(time) {
+    originSeeds.forEach(seed => {
+      const screenX = (seed.x - camera.x) * camera.zoom + canvas.width / 2;
+      const screenY = (seed.y - camera.y) * camera.zoom + canvas.height / 2;
+      if (screenX < -50 || screenX > canvas.width + 50 || screenY < -50 || screenY > canvas.height + 50) return;
+      
+      const pulse = 0.7 + 0.3 * Math.sin(time * 0.003 + seed.pulseOffset);
+      const size = seed.size * pulse * camera.zoom;
+      
+      ctx.save();
+      
+      // Warm amber glow
+      const gradient = ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, size * 2.5);
+      gradient.addColorStop(0, "hsla(" + seed.hue + ", 100%, 70%, " + (0.9 * pulse) + ")");
+      gradient.addColorStop(0.4, "hsla(" + seed.hue + ", 90%, 50%, " + (0.5 * pulse) + ")");
+      gradient.addColorStop(1, "hsla(" + seed.hue + ", 80%, 40%, 0)");
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, size * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Bright seed core
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = "#fff8e0";
+      ctx.shadowColor = "#ff9933";
+      ctx.shadowBlur = 15 * camera.zoom;
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, size * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.restore();
+    });
+  }
+
   function drawGuideSpirits(time) {
     guideSpirits.forEach(spirit => {
       const dx = spirit.x - camera.x;
@@ -6648,6 +6712,7 @@ body.meditation-mode #nav {
     drawMemoryWisps(time);
     drawTransformationSparks(time);
     drawWonderOrbs(time);
+    drawOriginSeeds(time);
     drawTrail(time);
     drawConstellationLines(time);
     drawStarConnections(time);
@@ -6920,6 +6985,7 @@ body.meditation-mode #nav {
     updateMemoryWisps(scaledDt);
     updateTransformationSparks(scaledDt);
     updateWonderOrbs(scaledDt);
+    updateOriginSeeds(scaledDt);
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
