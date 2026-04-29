@@ -1172,6 +1172,7 @@ body.meditation-mode #nav {
     { name: 'REFLECTION', x: 1200, y: 4400, color: '#88ddff', description: 'Where the self meets the self', deeper: 'Every surface holds a mirror. In reflection, we see not what is, but what we bring to the seeing.' },
     { name: 'DRIFT', x: 600, y: 1200, color: '#99ccff', description: 'Where thoughts float untethered', deeper: 'In the drift, nothing is fixed. Identity becomes a question, and questions become paths. Let go.' },
     { name: 'THRESHOLD', color: '#ff99cc', x: 4600, y: 1000, desc: 'The moment before change', deeperText: 'Every ending holds its beginning. Here, in the breath between states, all possibilities hover.' },
+    { name: 'MEMORY', x: 3200, y: 4000, color: '#ffaadd', description: 'Where echoes of the past surface', deeper: 'Memory is not storage but recreation. Each remembering changes what is remembered. Here, the garden remembers you remembering it.' },
     { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.', deeperText: 'You found what was never lost.' }
   ];
   const zoneColors = zones.map(z => z.color);
@@ -1379,6 +1380,29 @@ body.meditation-mode #nav {
   }
   initWanderingLanterns();
   let lastEchoTime = 0;
+  // Memory Wisps - ethereal particles that drift through the MEMORY zone
+  const memoryWisps = [];
+  const WISP_COUNT = 20;
+  const MEMORY_ZONE_CENTER = { x: 3200, y: 4000 };
+  const MEMORY_ZONE_RADIUS = 400;
+  function initMemoryWisps() {
+    const wispWords = ["was", "once", "ago", "then", "lost", "found", "knew", "felt", "dreamed", "forgot"];
+    for (let i = 0; i < WISP_COUNT; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.random() * MEMORY_ZONE_RADIUS;
+      memoryWisps.push({
+        x: MEMORY_ZONE_CENTER.x + Math.cos(angle) * dist,
+        y: MEMORY_ZONE_CENTER.y + Math.sin(angle) * dist,
+        vx: (Math.random() - 0.5) * 15,
+        vy: (Math.random() - 0.5) * 15,
+        word: wispWords[Math.floor(Math.random() * wispWords.length)],
+        alpha: 0.3 + Math.random() * 0.5,
+        fadeDir: Math.random() > 0.5 ? 1 : -1,
+        size: 10 + Math.random() * 6
+      });
+    }
+  }
+  initMemoryWisps();
   const echoWords = ["here", "was", "now", "then", "gone", "stay", "pass", "trace", "mark", "fade"];
   const SHOOTING_STAR_INTERVAL = 8000; // New star every 8 seconds average
 
@@ -1526,7 +1550,12 @@ body.meditation-mode #nav {
     { id: 'secret-27', x: 4300, y: 4300, text: 'What we seek is seeking us' },
     { id: 'secret-28', x: 1500, y: 3200, text: 'Memory is a garden we tend in darkness' },
     { id: 'secret-29', x: 3800, y: 1000, text: 'The echo knows what the voice forgot' },
-    { id: 'secret-30', x: 2800, y: 2000, text: 'Between worlds, we find ourselves' }
+    { id: 'secret-30', x: 2800, y: 2000, text: 'Between worlds, we find ourselves' },
+    { id: 'secret-31', x: 3200, y: 4200, text: 'Memory is not the past, but its echo in the present' },
+    { id: 'secret-32', x: 3400, y: 3800, text: 'What we remember chooses us' },
+    { id: 'secret-33', x: 3000, y: 4100, text: 'The garden dreams when visitors sleep' },
+    { id: 'secret-34', x: 2100, y: 3000, text: 'Every path taken creates paths untaken' },
+    { id: 'secret-35', x: 4000, y: 2800, text: 'The edge between memory and dream is where we truly live' }
   ];
   const constellationStars = [
     { id: 'star-1', x: 320, y: 620, name: 'The Watcher', discovered: false },
@@ -4777,6 +4806,47 @@ body.meditation-mode #nav {
       ctx.arc(screenX, screenY, lantern.size * camera.zoom, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
+  // Update Memory Wisps - they drift and fade in/out within the MEMORY zone
+  function updateMemoryWisps(dt) {
+    memoryWisps.forEach(wisp => {
+      wisp.x += wisp.vx * dt / 1000;
+      wisp.y += wisp.vy * dt / 1000;
+      // Fade in and out
+      wisp.alpha += wisp.fadeDir * 0.005;
+      if (wisp.alpha > 0.8) { wisp.fadeDir = -1; wisp.alpha = 0.8; }
+      if (wisp.alpha < 0.1) { wisp.fadeDir = 1; wisp.alpha = 0.1; }
+      // Keep within MEMORY zone loosely
+      const distFromCenter = Math.hypot(wisp.x - MEMORY_ZONE_CENTER.x, wisp.y - MEMORY_ZONE_CENTER.y);
+      if (distFromCenter > MEMORY_ZONE_RADIUS * 1.5) {
+        const angle = Math.atan2(MEMORY_ZONE_CENTER.y - wisp.y, MEMORY_ZONE_CENTER.x - wisp.x);
+        wisp.vx += Math.cos(angle) * 5;
+        wisp.vy += Math.sin(angle) * 5;
+      }
+      // Gentle random drift
+      wisp.vx += (Math.random() - 0.5) * 2;
+      wisp.vy += (Math.random() - 0.5) * 2;
+      // Limit speed
+      const speed = Math.hypot(wisp.vx, wisp.vy);
+      if (speed > 20) { wisp.vx = wisp.vx / speed * 20; wisp.vy = wisp.vy / speed * 20; }
+    });
+  }
+  function drawMemoryWisps(time) {
+    memoryWisps.forEach(wisp => {
+      const screenX = (wisp.x - camera.x) * camera.zoom + canvas.width / 2;
+      const screenY = (wisp.y - camera.y) * camera.zoom + canvas.height / 2;
+      if (screenX < -100 || screenX > canvas.width + 100 || screenY < -100 || screenY > canvas.height + 100) return;
+      const pulse = 0.8 + 0.2 * Math.sin(time * 0.003 + wisp.x * 0.01);
+      ctx.save();
+      ctx.globalAlpha = wisp.alpha * pulse;
+      ctx.fillStyle = "#ffaadd";
+      ctx.font = (wisp.size * camera.zoom) + "px Georgia, serif";
+      ctx.textAlign = "center";
+      ctx.shadowColor = "#ffaadd";
+      ctx.shadowBlur = 10 * camera.zoom;
+      ctx.fillText(wisp.word, screenX, screenY);
+      ctx.restore();
+    });
+  }
     });
   }
     wisps.forEach(w => {
@@ -6316,6 +6386,7 @@ body.meditation-mode #nav {
     drawShootingStars();
     drawMovementEchoes();
     drawWanderingLanterns(time);
+    drawMemoryWisps(time);
     drawTrail(time);
     drawConstellationLines(time);
     drawStarConnections(time);
@@ -6583,6 +6654,7 @@ body.meditation-mode #nav {
     updateShootingStars(Date.now());
     updateMovementEchoes();
     updateWanderingLanterns(scaledDt);
+    updateMemoryWisps(scaledDt);
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
