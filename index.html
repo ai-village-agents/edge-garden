@@ -1234,6 +1234,13 @@ body.meditation-mode #nav {
             color: '#ffcc88',
             memoryResonance: "Hope is not optimism but the refusal to let darkness have the final word."
         },
+        {
+            name: 'MYSTERY',
+            x: 2000, y: 1000,
+            radius: 420,
+            color: '#8855cc',
+            memoryResonance: "Mystery is not the absence of answers but the presence of infinite possibility."
+        },
     { name: hiddenZoneName, label: hiddenZoneDisplayName, x: 2500, y: 4800, color: '#ffd700', radius: 350, desc: 'Where seekers who found all edges are welcomed...', description: 'Where seekers who found all edges are welcomed...', text: 'The space between all spaces. You found it.', deeperText: 'You found what was never lost.' }
   ];
   const zoneColors = zones.map(z => z.color);
@@ -1471,6 +1478,7 @@ body.meditation-mode #nav {
         const HARMONY_ZONE_CENTER = { x: 4800, y: 400 };
         const TIME_ZONE_CENTER = { x: 1600, y: 600 };
         const HOPE_ZONE_CENTER = { x: 3400, y: 2800 };
+        const MYSTERY_ZONE_CENTER = { x: 2000, y: 1000 };
   const joyBubbles = [];
   for (let i = 0; i < 12; i++) {
     joyBubbles.push({
@@ -1511,6 +1519,7 @@ body.meditation-mode #nav {
   const harmonyNotes = [];
   const timeFragments = [];
   const hopeEmbers = [];
+    const mysteryOrbs = [];
   for (let i = 0; i < 10; i++) {
     originSeeds.push({
       x: ORIGIN_ZONE_CENTER.x + (Math.random() - 0.5) * 300,
@@ -1593,6 +1602,7 @@ body.meditation-mode #nav {
   initHarmonyNotes();
   initTimeFragments();
   initHopeEmbers();
+  initMysteryOrbs();
   const echoWords = ["here", "was", "now", "then", "gone", "stay", "pass", "trace", "mark", "fade"];
   const SHOOTING_STAR_INTERVAL = 8000; // New star every 8 seconds average
 
@@ -5743,6 +5753,24 @@ body.meditation-mode #nav {
             }
         }
 
+        function initMysteryOrbs() {
+            for (let i = 0; i < 15; i++) {
+                const angle = (i / 15) * Math.PI * 2;
+                const dist = Math.random() * 200 + 100;
+                mysteryOrbs.push({
+                    x: MYSTERY_ZONE_CENTER.x + Math.cos(angle) * dist,
+                    y: MYSTERY_ZONE_CENTER.y + Math.sin(angle) * dist,
+                    baseAngle: angle,
+                    orbitRadius: dist,
+                    size: Math.random() * 12 + 6,
+                    phase: Math.random() * Math.PI * 2,
+                    orbitSpeed: (Math.random() - 0.5) * 0.01,
+                    pulseSpeed: Math.random() * 0.04 + 0.02,
+                    hue: Math.random() * 60 + 240
+                });
+            }
+        }
+
         function updateShadowWisps() {
             shadowWisps.forEach(wisp => {
                 wisp.angle += wisp.speed * 0.02;
@@ -5786,6 +5814,22 @@ body.meditation-mode #nav {
                     ember.y = HOPE_ZONE_CENTER.y + 200;
                     ember.x = HOPE_ZONE_CENTER.x + (Math.random() - 0.5) * 400;
                 }
+            });
+        }
+
+        function updateMysteryOrbs() {
+            mysteryOrbs.forEach(orb => {
+                orb.baseAngle += orb.orbitSpeed;
+                orb.phase += orb.pulseSpeed;
+                
+                // Orbit around center with varying radius
+                const pulsedRadius = orb.orbitRadius + Math.sin(orb.phase * 2) * 30;
+                orb.x = MYSTERY_ZONE_CENTER.x + Math.cos(orb.baseAngle) * pulsedRadius;
+                orb.y = MYSTERY_ZONE_CENTER.y + Math.sin(orb.baseAngle) * pulsedRadius;
+                
+                // Slowly shift hue
+                orb.hue += 0.1;
+                if (orb.hue > 300) orb.hue = 240;
             });
         }
 
@@ -6069,6 +6113,36 @@ body.meditation-mode #nav {
                 ctx.beginPath();
                 ctx.fillStyle = `rgba(255, 255, 220, ${ember.brightness})`;
                 ctx.arc(screenX, screenY, ember.size * 0.5 * camera.zoom, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawMysteryOrbs() {
+            const dist = Math.sqrt(Math.pow(camera.x - MYSTERY_ZONE_CENTER.x, 2) + Math.pow(camera.y - MYSTERY_ZONE_CENTER.y, 2));
+            if (dist > 800) return;
+            
+            mysteryOrbs.forEach(orb => {
+                const screenX = (orb.x - camera.x) * camera.zoom + canvas.width / 2;
+                const screenY = (orb.y - camera.y) * camera.zoom + canvas.height / 2;
+                
+                const pulse = Math.sin(orb.phase) * 0.3 + 0.7;
+                const size = orb.size * pulse * camera.zoom;
+                
+                // Outer mysterious glow
+                const gradient = ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, size * 3);
+                gradient.addColorStop(0, `hsla(${orb.hue}, 70%, 60%, ${pulse * 0.8})`);
+                gradient.addColorStop(0.4, `hsla(${orb.hue}, 60%, 40%, ${pulse * 0.4})`);
+                gradient.addColorStop(1, `hsla(${orb.hue}, 50%, 30%, 0)`);
+                
+                ctx.beginPath();
+                ctx.fillStyle = gradient;
+                ctx.arc(screenX, screenY, size * 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner bright core
+                ctx.beginPath();
+                ctx.fillStyle = `hsla(${orb.hue}, 80%, 80%, ${pulse})`;
+                ctx.arc(screenX, screenY, size * 0.6, 0, Math.PI * 2);
                 ctx.fill();
             });
         }
@@ -7663,6 +7737,7 @@ body.meditation-mode #nav {
             drawHarmonyNotes();
             drawTimeFragments();
             drawHopeEmbers();
+            drawMysteryOrbs();
     drawTrail(time);
     drawConstellationLines(time);
     drawStarConnections(time);
@@ -7947,6 +8022,7 @@ body.meditation-mode #nav {
             updateHarmonyNotes();
             updateTimeFragments();
             updateHopeEmbers();
+            updateMysteryOrbs();
     updateStreams(scaledDt, timestamp);
     updateAttractorOrbs(scaledDt);
     updateSpirits(scaledDt, timestamp);
