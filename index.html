@@ -2799,7 +2799,12 @@ body.meditation-mode #nav {
     { id: 'star-12', x: 4460, y: 1740, name: 'The Navigator', discovered: false },
     { id: 'star-13', x: 4720, y: 3320, name: 'The Whisper', discovered: false },
     { id: 'star-14', x: 3580, y: 4380, name: 'The Sleeper', discovered: false },
-    { id: 'star-15', x: 2760, y: 4740, name: 'The Cartographer', discovered: false }
+    { id: 'star-15', x: 2760, y: 4740, name: 'The Cartographer', discovered: false },
+    { id: 'star-16', x: 4200, y: 2500, name: 'The Weaver', discovered: false },
+    { id: 'star-17', x: 1600, y: 1400, name: 'The Listener', discovered: false },
+    { id: 'star-18', x: 4600, y: 4600, name: 'The Anchor', discovered: false },
+    { id: 'star-19', x: 600, y: 2200, name: 'The Threshold', discovered: false },
+    { id: 'star-20', x: 2200, y: 500, name: 'The Origin', discovered: false }
   ];
   const starConnections = [
     ['star-1', 'star-3'],
@@ -2816,7 +2821,16 @@ body.meditation-mode #nav {
     ['star-14', 'star-15'],
     ['star-7', 'star-8'],
     ['star-6', 'star-7'],
-    ['star-9', 'star-10']
+    ['star-9', 'star-10'],
+    ['star-12', 'star-16'],
+    ['star-16', 'star-18'],
+    ['star-13', 'star-18'],
+    ['star-3', 'star-17'],
+    ['star-17', 'star-2'],
+    ['star-1', 'star-19'],
+    ['star-19', 'star-5'],
+    ['star-6', 'star-20'],
+    ['star-20', 'star-3']
   ];
   const memoryWell = {
     x: 2500,
