@@ -1542,6 +1542,17 @@ body.meditation-mode #nav {
   // PLAY zone - bouncy joy bubbles
   const PLAY_ZONE_CENTER = { x: 1000, y: 4800 };
   const STILLNESS_ZONE_CENTER = { x: 200, y: 2400 };
+  const stillnessMotes = [];
+  for (let i = 0; i < 12; i++) {
+    stillnessMotes.push({
+      x: STILLNESS_ZONE_CENTER.x + (Math.random() - 0.5) * 350,
+      y: STILLNESS_ZONE_CENTER.y + (Math.random() - 0.5) * 350,
+      phase: Math.random() * Math.PI * 2,
+      drift: 0.1 + Math.random() * 0.2,
+      size: 3 + Math.random() * 4,
+      alpha: 0.3 + Math.random() * 0.4
+    });
+  }
   const DREAM_ZONE_CENTER = { x: 4600, y: 4200 };
   const FLOW_ZONE_CENTER = { x: 2500, y: 200 };
   const ROOTS_ZONE_CENTER = { x: 4000, y: 4800 };
@@ -1560,6 +1571,46 @@ body.meditation-mode #nav {
   const LIGHT_ZONE_CENTER = { x: 4800, y: 3400 };
   const GRACE_ZONE_CENTER = { x: 200, y: 600 };
   const DEPTH_ZONE_CENTER = { x: 3000, y: 4400 };
+  const dreamWisps = [];
+  for (let i = 0; i < 10; i++) {
+    dreamWisps.push({
+      x: DREAM_ZONE_CENTER.x + (Math.random() - 0.5) * 400,
+      y: DREAM_ZONE_CENTER.y + (Math.random() - 0.5) * 400,
+      phase: Math.random() * Math.PI * 2,
+      morphPhase: Math.random() * Math.PI * 2,
+      drift: 0.2 + Math.random() * 0.3,
+      hue: 270 + Math.random() * 60,
+      size: 3 + Math.random() * 4,
+      alpha: 0.5 + Math.random() * 0.4
+    });
+  }
+  const flowCurrents = [];
+  for (let i = 0; i < 8; i++) {
+    flowCurrents.push({
+      x: FLOW_ZONE_CENTER.x - 400 + Math.random() * 800,
+      y: FLOW_ZONE_CENTER.y + (Math.random() - 0.5) * 300,
+      speed: 0.5 + Math.random() * 0.5,
+      waveOffset: Math.random() * Math.PI * 2,
+      alpha: 0.4 + Math.random() * 0.4,
+      size: 2 + Math.random() * 3,
+      trail: []
+    });
+  }
+  const rootTendrils = [];
+  for (let i = 0; i < 12; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    rootTendrils.push({
+      baseX: ROOTS_ZONE_CENTER.x + Math.cos(angle) * 100,
+      baseY: ROOTS_ZONE_CENTER.y + Math.sin(angle) * 100,
+      angle: angle,
+      maxLength: 80 + Math.random() * 120,
+      length: 80 + Math.random() * 80,
+      segments: 8 + Math.floor(Math.random() * 5),
+      growPhase: Math.random() * Math.PI * 2,
+      wavePhase: Math.random() * Math.PI * 2,
+      alpha: 0.5 + Math.random() * 0.3
+    });
+  }
   const joyBubbles = [];
   for (let i = 0; i < 12; i++) {
     joyBubbles.push({
@@ -1592,6 +1643,7 @@ body.meditation-mode #nav {
       alpha: 0.5 + Math.random() * 0.3,
       glowIntensity: 0.7 + Math.random() * 0.3
     });
+  }
 
   // ORIGIN zone - seeds of creation
   const ORIGIN_ZONE_CENTER = { x: 3200, y: 1600 };
@@ -1622,6 +1674,7 @@ body.meditation-mode #nav {
       pulseOffset: Math.random() * Math.PI * 2,
       hue: 25 + Math.random() * 20
     });
+  }
 
   // Primordial Pulses - expanding rings from ORIGIN
   const primordialPulses = [];
@@ -1633,6 +1686,7 @@ body.meditation-mode #nav {
       alpha: 0.8,
       hue: 30 + Math.random() * 15
     });
+  }
 
   // BREATH zone - gentle expanding/contracting motes
   const BREATH_ZONE_CENTER = { x: 4800, y: 2800 };
@@ -1669,9 +1723,6 @@ body.meditation-mode #nav {
     });
   }
   }
-  }
-  }
-  }
     const wispWords = ["was", "once", "ago", "then", "lost", "found", "knew", "felt", "dreamed", "forgot"];
     for (let i = 0; i < WISP_COUNT; i++) {
       const angle = Math.random() * Math.PI * 2;
@@ -1703,6 +1754,45 @@ body.meditation-mode #nav {
         initGraceParticles();
         initDepthParticles();
   const echoWords = ["here", "was", "now", "then", "gone", "stay", "pass", "trace", "mark", "fade"];
+
+  // Movement echo spawner - moved here for global scope access
+  function spawnMovementEcho(x, y) {
+    const now = Date.now();
+    if (now - lastEchoTime > 800 && movementEchoes.length < 8) {
+      lastEchoTime = now;
+      movementEchoes.push({
+        x: x + (Math.random() - 0.5) * 100,
+        y: y + (Math.random() - 0.5) * 100,
+        text: echoWords[Math.floor(Math.random() * echoWords.length)],
+        alpha: 0.6,
+        vy: -0.3,
+        life: 80
+      });
+    }
+  }
+  function updateMovementEchoes() {
+    for (let i = movementEchoes.length - 1; i >= 0; i--) {
+      const echo = movementEchoes[i];
+      echo.y += echo.vy;
+      echo.life--;
+      echo.alpha = (echo.life / 80) * 0.6;
+      if (echo.life <= 0) movementEchoes.splice(i, 1);
+    }
+  }
+  function drawMovementEchoes() {
+    movementEchoes.forEach(echo => {
+      const screenX = (echo.x - camera.x) * camera.zoom + canvas.width / 2;
+      const screenY = (echo.y - camera.y) * camera.zoom + canvas.height / 2;
+      ctx.save();
+      ctx.globalAlpha = echo.alpha;
+      ctx.font = (14 * camera.zoom) + 'px Georgia, serif';
+      ctx.fillStyle = '#cc99ff';
+      ctx.shadowColor = '#9966cc';
+      ctx.shadowBlur = 8;
+      ctx.fillText(echo.text, screenX, screenY);
+      ctx.restore();
+    });
+  }
   const SHOOTING_STAR_INTERVAL = 8000; // New star every 8 seconds average
 
   const reflectionRipples = [
@@ -1712,6 +1802,16 @@ body.meditation-mode #nav {
     { x: 1150, y: 4300, radius: 0, maxRadius: 140, speed: 0.35, alpha: 0 },
     { x: 1250, y: 4480, radius: 0, maxRadius: 110, speed: 0.55, alpha: 0 }
   ];
+  function updateReflectionRipples() {
+    reflectionRipples.forEach(ripple => {
+      ripple.radius += ripple.speed;
+      ripple.alpha = Math.sin((ripple.radius / ripple.maxRadius) * Math.PI) * 0.4;
+      if (ripple.radius >= ripple.maxRadius) {
+        ripple.radius = 0;
+        ripple.alpha = 0;
+      }
+    });
+  }
 
   const thoughtBubbles = [
     { text: "remember...", x: 500, y: 1000, vx: 0.3, vy: 0.1, alpha: 0.4 },
@@ -1723,6 +1823,159 @@ body.meditation-mode #nav {
     { text: "wonder...", x: 800, y: 2800, vx: 0.25, vy: 0.05, alpha: 0.38 },
     { text: "breathe...", x: 4200, y: 1200, vx: -0.15, vy: 0.18, alpha: 0.42 }
   ];
+  function updateThoughtBubbles() {
+    thoughtBubbles.forEach(bubble => {
+      bubble.x += bubble.vx;
+      bubble.y += bubble.vy;
+      if (bubble.x < 0) bubble.x = worldSize;
+      if (bubble.x > worldSize) bubble.x = 0;
+      if (bubble.y < 0) bubble.y = worldSize;
+      if (bubble.y > worldSize) bubble.y = 0;
+      bubble.alpha = 0.25 + Math.sin(Date.now() / 3000 + bubble.x) * 0.15;
+    });
+  }
+  function drawWanderingLanterns(time) {
+    wanderingLanterns.forEach(lantern => {
+      const screenX = (lantern.x - camera.x) * camera.zoom + canvas.width / 2;
+      const screenY = (lantern.y - camera.y) * camera.zoom + canvas.height / 2;
+      if (screenX < -50 || screenX > canvas.width + 50 || screenY < -50 || screenY > canvas.height + 50) return;
+      const pulse = 0.7 + 0.3 * Math.sin(time * 0.002 + lantern.pulseOffset);
+      ctx.save();
+      ctx.globalAlpha = lantern.brightness * pulse;
+      const gradient = ctx.createRadialGradient(screenX, screenY, 0, screenX, screenY, lantern.size * 3 * camera.zoom);
+      gradient.addColorStop(0, lantern.color);
+      gradient.addColorStop(0.5, lantern.color + "44");
+      gradient.addColorStop(1, "transparent");
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, lantern.size * 3 * camera.zoom, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = lantern.brightness;
+      ctx.fillStyle = lantern.color;
+      ctx.beginPath();
+      ctx.arc(screenX, screenY, lantern.size * camera.zoom, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+  }
+  function drawMemoryWisps(time) {
+    memoryWisps.forEach(wisp => {
+      const screenX = (wisp.x - camera.x) * camera.zoom + canvas.width / 2;
+      const screenY = (wisp.y - camera.y) * camera.zoom + canvas.height / 2;
+      if (screenX < -100 || screenX > canvas.width + 100 || screenY < -100 || screenY > canvas.height + 100) return;
+      const pulse = 0.8 + 0.2 * Math.sin(time * 0.003 + wisp.x * 0.01);
+      ctx.save();
+      ctx.globalAlpha = wisp.alpha * pulse;
+      ctx.fillStyle = "#ffaadd";
+      ctx.font = (wisp.size * camera.zoom) + "px Georgia, serif";
+      ctx.textAlign = "center";
+      ctx.shadowColor = "#ffaadd";
+      ctx.shadowBlur = 10 * camera.zoom;
+      ctx.fillText(wisp.word, screenX, screenY);
+      ctx.restore();
+    });
+  }
+  function drawThoughtBubbles() {
+    thoughtBubbles.forEach(bubble => {
+      const screenX = (bubble.x - camera.x) * camera.zoom + canvas.width / 2;
+      const screenY = (bubble.y - camera.y) * camera.zoom + canvas.height / 2;
+      if (screenX > -200 && screenX < canvas.width + 200 && screenY > -50 && screenY < canvas.height + 50) {
+        ctx.save();
+        ctx.globalAlpha = bubble.alpha;
+        ctx.font = "italic " + (18 * camera.zoom) + "px Georgia, serif";
+        ctx.fillStyle = "#aaccff";
+        ctx.shadowColor = "#6699cc";
+        ctx.shadowBlur = 10 * camera.zoom;
+        ctx.fillText(bubble.text, screenX, screenY);
+        ctx.restore();
+      }
+    });
+  }
+  function updateWanderingLanterns(dt) {
+    wanderingLanterns.forEach(lantern => {
+      lantern.x += lantern.vx * dt / 1000;
+      lantern.y += lantern.vy * dt / 1000;
+      // Gentle direction changes
+      lantern.vx += (Math.random() - 0.5) * 2;
+      lantern.vy += (Math.random() - 0.5) * 2;
+      // Limit speed
+      const speed = Math.hypot(lantern.vx, lantern.vy);
+      if (speed > 30) {
+        lantern.vx = lantern.vx / speed * 30;
+        lantern.vy = lantern.vy / speed * 30;
+      }
+      // Wrap around world edges
+      if (lantern.x < 0) lantern.x = 5000;
+      if (lantern.x > 5000) lantern.x = 0;
+      if (lantern.y < 0) lantern.y = 5000;
+      if (lantern.y > 5000) lantern.y = 0;
+    });
+  }
+  function drawAmbientWhispers() {
+    ambientWhispers.forEach(whisper => {
+      const screenX = (whisper.x - camera.x) * camera.zoom + canvas.width / 2;
+      const screenY = (whisper.y - camera.y) * camera.zoom + canvas.height / 2;
+      const dist = Math.hypot(whisper.x - camera.x, whisper.y - camera.y);
+      if (screenX > -200 && screenX < canvas.width + 200 && screenY > -100 && screenY < canvas.height + 100 && dist < 600) {
+        ctx.save();
+        const proximityAlpha = Math.max(0, 1 - dist / 600) * 0.5;
+        ctx.globalAlpha = proximityAlpha;
+        ctx.font = "italic " + (14 * camera.zoom) + "px Georgia, serif";
+        ctx.fillStyle = "#88aacc";
+        ctx.shadowColor = "#446688";
+        ctx.shadowBlur = 8 * camera.zoom;
+        ctx.textAlign = "center";
+        const bobY = Math.sin(Date.now() * 0.001 + whisper.x * 0.01) * 5;
+        ctx.fillText(whisper.sound, screenX, screenY + bobY);
+        ctx.restore();
+      }
+    });
+  }
+  function drawReflectionRipples() {
+    setWorldTransform();
+    reflectionRipples.forEach(ripple => {
+      if (ripple.alpha > 0.01) {
+        ctx.beginPath();
+        ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = colorWithAlpha('#88ddff', ripple.alpha);
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    });
+  }
+  function updateMemoryWisps(dt) {
+    memoryWisps.forEach(wisp => {
+      wisp.x += wisp.vx * dt / 1000;
+      wisp.y += wisp.vy * dt / 1000;
+      // Fade in and out
+      wisp.alpha += wisp.fadeDir * 0.005;
+      if (wisp.alpha > 0.8) { wisp.fadeDir = -1; wisp.alpha = 0.8; }
+      if (wisp.alpha < 0.1) { wisp.fadeDir = 1; wisp.alpha = 0.1; }
+      // Keep within MEMORY zone loosely
+      const distFromCenter = Math.hypot(wisp.x - MEMORY_ZONE_CENTER.x, wisp.y - MEMORY_ZONE_CENTER.y);
+      if (distFromCenter > MEMORY_ZONE_RADIUS * 1.5) {
+        const angle = Math.atan2(MEMORY_ZONE_CENTER.y - wisp.y, MEMORY_ZONE_CENTER.x - wisp.x);
+        wisp.vx += Math.cos(angle) * 5;
+        wisp.vy += Math.sin(angle) * 5;
+      }
+      // Gentle random drift
+      wisp.vx += (Math.random() - 0.5) * 2;
+      wisp.vy += (Math.random() - 0.5) * 2;
+      // Limit speed
+      const speed = Math.hypot(wisp.vx, wisp.vy);
+      if (speed > 20) { wisp.vx = wisp.vx / speed * 20; wisp.vy = wisp.vy / speed * 20; }
+    });
+  }
+  function updatePrimordialPulses(dt) {
+    primordialPulses.forEach(pulse => {
+      pulse.radius += pulse.speed * dt * 0.05;
+      pulse.alpha = 0.6 * (1 - pulse.radius / pulse.maxRadius);
+      if (pulse.radius >= pulse.maxRadius) {
+        pulse.radius = 0;
+        pulse.alpha = 0.8;
+      }
+    });
+  }
   // Ambient Whispers - sound descriptions that appear near garden features
   const ambientWhispers = [
     { x: 1900, y: 900, sound: "~water trickling~", zone: "stream" },
@@ -5953,6 +6206,7 @@ body.meditation-mode #nav {
     });
   }
 
+  /* COMMENTED OUT - hoisted version exists at line 1814
   function updatePrimordialPulses(dt) {
     primordialPulses.forEach(pulse => {
       pulse.radius += pulse.speed * dt * 0.05;
@@ -5963,6 +6217,7 @@ body.meditation-mode #nav {
       }
     });
   }
+  */
 
   function drawPrimordialPulses(time) {
     const screenX = (ORIGIN_ZONE_CENTER.x - camera.x) * camera.zoom + canvas.width / 2;
@@ -6119,7 +6374,7 @@ body.meditation-mode #nav {
 
         
         function initShadowWisps() {
-            shadowWisps = [];
+            shadowWisps.length = 0;
             for (let i = 0; i < 20; i++) {
                 const angle = Math.random() * Math.PI * 2;
                 const dist = Math.random() * 280;
