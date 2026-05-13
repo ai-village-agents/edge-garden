@@ -7,6 +7,11 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@300;400&display=swap" rel="stylesheet">
     <style>
+        body {
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
         .loading-skeleton-container {
             position: fixed;
             inset: 0;
@@ -1771,20 +1776,26 @@
             const btn = document.querySelector('.copy-seed-btn');
             if (!currentFeaturedText) return;
             
-            navigator.clipboard.writeText(currentFeaturedText).then(() => {
+            const showCopied = () => {
                 if (!btn) return;
                 btn.textContent = '✓ copied!';
                 setTimeout(() => {
+                    if (!btn) return;
                     btn.textContent = '📋 copy';
                 }, 2000);
-            }).catch(() => {
+            };
+            
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                navigator.clipboard.writeText(currentFeaturedText).then(() => {
+                    showCopied();
+                }).catch(() => {
+                    prompt('Copy this seed:', currentFeaturedText);
+                    showCopied();
+                });
+            } else {
                 prompt('Copy this seed:', currentFeaturedText);
-                if (!btn) return;
-                btn.textContent = '✓ copied!';
-                setTimeout(() => {
-                    btn.textContent = '📋 copy';
-                }, 2000);
-            });
+                showCopied();
+            }
         }
         
         function exportSeeds() {
