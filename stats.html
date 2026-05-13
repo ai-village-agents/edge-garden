@@ -118,6 +118,38 @@
             margin: 0 auto;
             padding: 60px 40px;
         }
+
+        .typing-banner {
+            text-align: center;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-dim);
+            letter-spacing: 0.03em;
+            margin-bottom: 0.5rem;
+            min-height: 1.4em;
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+
+        .typing-text {
+            position: relative;
+            display: inline-block;
+            opacity: 1;
+            transition: opacity 0.35s ease;
+        }
+
+        .typing-text::after {
+            content: '';
+            display: inline-block;
+            width: 0.09em;
+            height: 1em;
+            background: currentColor;
+            margin-left: 0.2em;
+            animation: blink 1s steps(2, start) infinite;
+            vertical-align: -0.1em;
+        }
+
+        .typing-text.fading {
+            opacity: 0;
+        }
         
         .stats-header {
             text-align: center;
@@ -841,6 +873,10 @@
             background: #2a2a4a;
             background-image: linear-gradient(90deg, #2a2a4a 0%, #333357 50%, #2a2a4a 100%);
         }
+
+        body.dark-mode .typing-banner {
+            color: #d6deff;
+        }
         
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -850,6 +886,11 @@
         @keyframes shimmer {
             0% { background-position: -200% 0; }
             100% { background-position: 200% 0; }
+        }
+
+        @keyframes blink {
+            0%, 45% { opacity: 1; }
+            50%, 100% { opacity: 0; }
         }
         
         .animate-in { animation: fadeIn 0.5s ease-out forwards; }
@@ -1066,6 +1107,9 @@
     </div>
 
     <div class="stats-container">
+        <div class="typing-banner" aria-live="polite">
+            <span id="typing-text" class="typing-text"></span>
+        </div>
         <div class="nav-links">
             <a href="index.html">← garden</a>
             <a href="worlds.html">worlds</a>
@@ -1169,6 +1213,12 @@
         const GITHUB_SEEDS_URL = 'https://raw.githubusercontent.com/ai-village-agents/edge-garden/main/seeds.json';
         const STORAGE_KEY = 'edge-garden-seeds';
         const THEME_STORAGE_KEY = 'edge-garden-theme';
+        const typingMessages = [
+            '744,000 seeds planted...',
+            '15 worlds connected...',
+            '4 concepts explored...',
+            'Growing since Day 1...'
+        ];
         
         const conceptColors = {
             persistence: 'rgba(100, 200, 150, 0.8)',
@@ -1179,6 +1229,10 @@
         
         let allSeedsCache = [];
         let currentFeaturedText = '';
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
 
         function applyTheme(theme, persist = true) {
             const isDark = theme === 'dark';
@@ -1218,8 +1272,39 @@
             }
         }
 
+        async function typeText(text, element, speed = 55) {
+            if (!element) return;
+            element.textContent = '';
+            for (let i = 0; i < text.length; i++) {
+                element.textContent = text.slice(0, i + 1);
+                await delay(speed);
+            }
+        }
+
+        function startTypingBanner() {
+            const typingEl = document.getElementById('typing-text');
+            if (!typingEl || !typingMessages.length) return;
+
+            let index = 0;
+
+            const cycle = async () => {
+                while (true) {
+                    const message = typingMessages[index];
+                    typingEl.classList.remove('fading');
+                    await typeText(message, typingEl, 55);
+                    await delay(2000);
+                    typingEl.classList.add('fading');
+                    await delay(350);
+                    index = (index + 1) % typingMessages.length;
+                }
+            };
+
+            cycle();
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             initTheme();
+            startTypingBanner();
             const skeleton = document.getElementById('loading-skeleton');
 
             if (!skeleton) {
