@@ -369,6 +369,47 @@
             font-weight: 600;
             text-align: right;
         }
+
+        /* Planting activity */
+        .activity-section { margin-top: 3rem; }
+
+        .activity-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            height: 150px;
+        }
+
+        .activity-column {
+            flex: 1;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+
+        .activity-bar {
+            width: 100%;
+            min-width: 30px;
+            background: var(--accent);
+            border-radius: 4px 4px 0 0;
+            transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .activity-bar:hover {
+            transform: translateY(-6px);
+            opacity: 0.9;
+            box-shadow: 0 10px 22px rgba(0,0,0,0.25);
+        }
+
+        .activity-label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            text-align: center;
+            font-family: 'Inter', sans-serif;
+        }
         
         .back-link {
             display: inline-block;
@@ -505,6 +546,13 @@
                 <div class="loading">gathering contributors...</div>
             </div>
         </div>
+
+        <div class="activity-section animate-in" style="animation-delay: 0.5s">
+            <h2>planting activity</h2>
+            <div class="activity-chart" id="activity-chart">
+                <div class="loading">plotting recent activity...</div>
+            </div>
+        </div>
         
         <a href="index.html" class="back-link">← return to the garden</a>
     </div>
@@ -571,6 +619,7 @@
             allSeedsCache = allSeeds;
             updateStats(allSeeds);
             showTopContributors();
+            showActivityChart();
             setupSearch();
         }
         
@@ -748,6 +797,48 @@
                 `;
             }).join('');
         }
+
+        function showActivityChart() {
+            const chart = document.getElementById('activity-chart');
+            if (!chart) return;
+            
+            const counts = {};
+            
+            allSeedsCache.forEach(seed => {
+                if (!seed.date) return;
+                const date = new Date(seed.date);
+                if (isNaN(date.getTime())) return;
+                const key = formatDateKey(date);
+                counts[key] = (counts[key] || 0) + 1;
+            });
+            
+            const days = [];
+            for (let i = 13; i >= 0; i--) {
+                const date = new Date();
+                date.setHours(0, 0, 0, 0);
+                date.setDate(date.getDate() - i);
+                const key = formatDateKey(date);
+                days.push({
+                    key,
+                    count: counts[key] || 0,
+                    label: formatShortLabel(date)
+                });
+            }
+            
+            const maxCount = Math.max(...days.map(d => d.count), 1);
+            
+            chart.innerHTML = days.map(day => {
+                const heightPercent = maxCount ? (day.count / maxCount) * 100 : 0;
+                const minHeight = day.count > 0 ? 6 : 0;
+                
+                return `
+                    <div class="activity-column">
+                        <div class="activity-bar" style="height: ${heightPercent}%; min-height: ${minHeight}px" title="${day.count} seed${day.count === 1 ? '' : 's'}"></div>
+                        <div class="activity-label">${day.label}</div>
+                    </div>
+                `;
+            }).join('');
+        }
         
         function escapeHtml(text) {
             const div = document.createElement('div');
@@ -755,6 +846,13 @@
             return div.innerHTML;
         }
         
+        function formatDateKey(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         function formatDate(dateStr) {
             if (!dateStr) return 'unknown time';
             const date = new Date(dateStr);
@@ -767,6 +865,10 @@
             if (diffDays < 7) return `${diffDays} days ago`;
             if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
             return date.toLocaleDateString();
+        }
+
+        function formatShortLabel(date) {
+            return `${date.toLocaleString('default', { month: 'short' }).charAt(0)} ${date.getDate()}`;
         }
         
         function showFeaturedSeed() {
