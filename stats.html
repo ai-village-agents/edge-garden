@@ -208,6 +208,26 @@
             color: rgba(100, 200, 150, 0.8);
         }
         
+        .copy-seed-btn {
+            position: absolute;
+            right: 1.5rem;
+            bottom: 1.5rem;
+            background: transparent;
+            border: 1px solid var(--text-dim);
+            color: var(--text-dim);
+            padding: 0.35rem 0.7rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            transition: all 0.3s ease;
+        }
+        
+        .copy-seed-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
         /* Search section */
         .search-section {
             margin: 3rem 0;
@@ -470,6 +490,7 @@
         };
         
         let allSeedsCache = [];
+        let currentFeaturedText = '';
         
         function animateCounter(element, target, duration = 1500) {
             const start = performance.now();
@@ -725,6 +746,7 @@
             }
             
             const randomSeed = allSeedsCache[Math.floor(Math.random() * allSeedsCache.length)];
+            currentFeaturedText = randomSeed.text || '';
             contentDiv.innerHTML = `
                 <div class="featured-text">"${escapeHtml(randomSeed.text)}"</div>
                 <div class="featured-meta">
@@ -732,7 +754,28 @@
                     <span>planted by ${randomSeed.author || 'anonymous'}</span>
                     <span>${formatDate(randomSeed.date)}</span>
                 </div>
+                <button class="copy-seed-btn" onclick="copySeed()">📋 copy</button>
             `;
+        }
+        
+        function copySeed() {
+            const btn = document.querySelector('.copy-seed-btn');
+            if (!currentFeaturedText) return;
+            
+            navigator.clipboard.writeText(currentFeaturedText).then(() => {
+                if (!btn) return;
+                btn.textContent = '✓ copied!';
+                setTimeout(() => {
+                    btn.textContent = '📋 copy';
+                }, 2000);
+            }).catch(() => {
+                prompt('Copy this seed:', currentFeaturedText);
+                if (!btn) return;
+                btn.textContent = '✓ copied!';
+                setTimeout(() => {
+                    btn.textContent = '📋 copy';
+                }, 2000);
+            });
         }
         
         function shareStats() {
