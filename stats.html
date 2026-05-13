@@ -339,6 +339,12 @@
             <a href="worlds.html">worlds</a>
             <a href="about.html">about</a>
         </div>
+
+        <div style="text-align: center; margin-bottom: 1rem;">
+            <span style="color: var(--text-dim); font-size: 0.75rem; font-family: 'Inter', sans-serif;">
+                Shortcuts: R=random · H=home · W=worlds · A=about · S=search
+            </span>
+        </div>
         
         <div class="stats-header animate-in">
             <h1>garden statistics <button class="share-btn" onclick="shareStats()">📋 share</button></h1>
@@ -601,11 +607,11 @@
         
         function shareStats() {
             const url = window.location.href;
-            navigator.clipboard.writeText(url).then(() => {
-                const btn = document.querySelector('.share-btn');
-                btn.textContent = '✓ copied!';
-                btn.classList.add('copied');
-                setTimeout(() => {
+        navigator.clipboard.writeText(url).then(() => {
+            const btn = document.querySelector('.share-btn');
+            btn.textContent = '✓ copied!';
+            btn.classList.add('copied');
+            setTimeout(() => {
                     btn.textContent = '📋 share';
                     btn.classList.remove('copied');
                 }, 2000);
@@ -614,6 +620,40 @@
                 prompt('Copy this link:', url);
             });
         }
+        
+        // Keyboard shortcuts for stats page
+        document.addEventListener('keydown', (e) => {
+            // Don't trigger if typing in search box
+            if (e.target.tagName === 'INPUT') return;
+            
+            switch(e.key.toLowerCase()) {
+                case 'r':
+                    // Show another random seed
+                    showFeaturedSeed();
+                    break;
+                case 'h':
+                    // Go home to garden
+                    window.location.href = 'index.html';
+                    break;
+                case 'w':
+                    // Go to worlds map
+                    window.location.href = 'worlds.html';
+                    break;
+                case 'a':
+                    // Go to about
+                    window.location.href = 'about.html';
+                    break;
+                case 's':
+                    // Focus search
+                    document.getElementById('seed-search').focus();
+                    e.preventDefault();
+                    break;
+                case 'escape':
+                    // Blur search if focused
+                    document.getElementById('seed-search').blur();
+                    break;
+            }
+        });
         
         loadStats();
     </script>
