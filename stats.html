@@ -184,6 +184,17 @@
             border-color: var(--accent);
             color: var(--accent);
         }
+
+        .refresh-btn:focus-visible,
+        .share-btn:focus-visible,
+        .export-btn:focus-visible,
+        .copy-seed-btn:focus-visible,
+        .scroll-top-btn:focus-visible,
+        .nav-links a:focus-visible,
+        .back-link:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
         
         .share-btn {
             background: transparent;
@@ -543,16 +554,16 @@
         </div>
         
         <div class="stats-header animate-in">
-            <h1>garden statistics <button class="export-btn" onclick="exportSeeds()">⬇ export</button> <button class="share-btn" onclick="shareStats()">📋 share</button></h1>
+            <h1>garden statistics <button class="export-btn" aria-label="Export seeds as JSON" onclick="exportSeeds()">⬇ export</button> <button class="share-btn" aria-label="Share this page" onclick="shareStats()">📋 share</button></h1>
             <p>measuring the unmeasurable — patterns in the seeds</p>
         </div>
         
-        <div class="total-seeds animate-in" style="animation-delay: 0.1s">
+        <div class="total-seeds animate-in" role="region" aria-label="Total seed count" style="animation-delay: 0.1s">
             <span class="number" id="total-count">...</span>
             <span class="label">seeds planted across all edges</span>
         </div>
         
-        <div class="concept-stats" id="concept-stats">
+        <div class="concept-stats" id="concept-stats" role="region" aria-label="Seeds by concept">
             <div class="loading">gathering statistics...</div>
         </div>
         
@@ -561,15 +572,15 @@
             <p style="text-align: center; color: var(--text-dim); margin-bottom: 1.5rem; font-size: 0.9rem;">
                 each cell represents seeds by concept — color shows which edge
             </p>
-            <div class="density-grid" id="density-grid"></div>
+            <div class="density-grid" id="density-grid" role="region" aria-label="Pattern density visualization"></div>
         </div>
         
-        <div class="featured-seed animate-in" style="animation-delay: 0.32s">
+        <div class="featured-seed animate-in" role="region" aria-label="Featured seed spotlight" style="animation-delay: 0.32s">
             <h2>featured seed</h2>
             <div id="featured-content">
                 <div class="loading">selecting a seed...</div>
             </div>
-            <button class="refresh-btn" onclick="showFeaturedSeed()">✦ show another</button>
+            <button class="refresh-btn" aria-label="Show another random seed" onclick="showFeaturedSeed()">✦ show another</button>
         </div>
         
         <div class="search-section animate-in" style="animation-delay: 0.35s">
@@ -595,14 +606,14 @@
         
         <div class="contributors-section animate-in" style="animation-delay: 0.45s">
             <h2>top contributors</h2>
-            <div id="contributors-list">
+            <div id="contributors-list" role="region" aria-label="Top contributors">
                 <div class="loading">gathering contributors...</div>
             </div>
         </div>
 
         <div class="activity-section animate-in" style="animation-delay: 0.5s">
             <h2>planting activity</h2>
-            <div class="activity-chart" id="activity-chart">
+            <div class="activity-chart" id="activity-chart" role="region" aria-label="Planting activity chart">
                 <div class="loading">plotting recent activity...</div>
             </div>
         </div>
@@ -940,7 +951,7 @@
                     <span>planted by ${randomSeed.author || 'anonymous'}</span>
                     <span>${formatDate(randomSeed.date)}</span>
                 </div>
-                <button class="copy-seed-btn" onclick="copySeed()">📋 copy</button>
+                <button class="copy-seed-btn" aria-label="Copy seed text" onclick="copySeed()">📋 copy</button>
             `;
         }
         
@@ -1057,6 +1068,6 @@
         
         loadStats();
     </script>
-    <button id="scroll-top" class="scroll-top-btn" onclick="scrollToTop()" title="Scroll to top">↑</button>
+    <button id="scroll-top" class="scroll-top-btn" aria-label="Scroll to top" onclick="scrollToTop()" title="Scroll to top">↑</button>
 </body>
 </html>
