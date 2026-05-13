@@ -208,6 +208,24 @@
             color: rgba(100, 200, 150, 0.8);
         }
         
+        .export-btn {
+            background: transparent;
+            border: 1px solid var(--text-dim);
+            color: var(--text-dim);
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            margin-left: 1rem;
+        }
+        
+        .export-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
         .copy-seed-btn {
             position: absolute;
             right: 1.5rem;
@@ -490,7 +508,7 @@
         </div>
         
         <div class="stats-header animate-in">
-            <h1>garden statistics <button class="share-btn" onclick="shareStats()">📋 share</button></h1>
+            <h1>garden statistics <button class="export-btn" onclick="exportSeeds()">⬇ export</button> <button class="share-btn" onclick="shareStats()">📋 share</button></h1>
             <p>measuring the unmeasurable — patterns in the seeds</p>
         </div>
         
@@ -909,6 +927,19 @@
                     btn.textContent = '📋 copy';
                 }, 2000);
             });
+        }
+        
+        function exportSeeds() {
+            const data = JSON.stringify(allSeedsCache, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'edge-garden-seeds.json';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
         }
         
         function shareStats() {
