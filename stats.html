@@ -83,6 +83,44 @@
             border: 1px solid var(--text-dim);
             border-radius: 8px;
         }
+
+        .insights-section {
+            margin: 3rem 0;
+            padding: 2rem;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--text-dim);
+            border-radius: 8px;
+        }
+
+        .insights-section h2 { margin-bottom: 1.25rem; }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+        }
+
+        .insight-card {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            padding: 0.95rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--text-dim);
+            background: rgba(255,255,255,0.02);
+            transition: border-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .insight-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .insight-icon { font-size: 1.35rem; }
+
+        .insight-meta { display: flex; flex-direction: column; gap: 0.25rem; }
+        .insight-label { color: var(--text-dim); font-size: 0.9rem; letter-spacing: 0.01em; }
+        .insight-value { font-family: 'Inter', sans-serif; color: var(--text-light); font-size: 1.05rem; }
         
         .density-viz h2 { margin-bottom: 1.5rem; text-align: center; }
         
@@ -623,6 +661,13 @@
         <div class="concept-stats" id="concept-stats" role="region" aria-label="Seeds by concept">
             <div class="loading">gathering statistics...</div>
         </div>
+
+        <div class="insights-section animate-in" style="animation-delay: 0.25s">
+            <h2>garden insights</h2>
+            <div class="insights-grid" id="insights-list">
+                <div class="loading">surfacing insights...</div>
+            </div>
+        </div>
         
         <div class="density-viz animate-in" style="animation-delay: 0.3s">
             <h2>pattern density</h2>
@@ -739,6 +784,7 @@
             
             allSeedsCache = allSeeds;
             updateStats(allSeeds);
+            showInsights();
             showTopContributors();
             showActivityChart();
             setupSearch();
@@ -782,6 +828,76 @@
             buildDensityGrid(seeds, counts, total);
             showRecentSeeds(seeds);
             showFeaturedSeed();
+        }
+
+        function showInsights() {
+            const insightsList = document.getElementById('insights-list');
+            if (!insightsList) return;
+
+            if (!allSeedsCache.length) {
+                insightsList.innerHTML = '<p style="color: var(--text-dim); font-style: italic;">No insights yet. Plant seeds to reveal patterns.</p>';
+                return;
+            }
+
+            const contributorCounts = {};
+            const conceptCounts = { persistence: 0, loss: 0, edges: 0, patterns: 0 };
+            const dayCounts = {};
+            let newestDate = null;
+
+            allSeedsCache.forEach(seed => {
+                const author = (seed.author && seed.author.trim()) ? seed.author.trim() : 'anonymous';
+                contributorCounts[author] = (contributorCounts[author] || 0) + 1;
+
+                if (conceptCounts.hasOwnProperty(seed.concept)) {
+                    conceptCounts[seed.concept]++;
+                }
+
+                if (seed.date) {
+                    const parsedDate = new Date(seed.date);
+                    if (!isNaN(parsedDate.getTime())) {
+                        const key = formatDateKey(parsedDate);
+                        dayCounts[key] = (dayCounts[key] || 0) + 1;
+                        if (!newestDate || parsedDate > newestDate) {
+                            newestDate = parsedDate;
+                        }
+                    }
+                }
+            });
+
+            const [topContributor, topContributorCount] = Object.entries(contributorCounts)
+                .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0] || ['—', 0];
+
+            const dayEntries = Object.entries(dayCounts)
+                .sort((a, b) => b[1] - a[1] || new Date(b[0]) - new Date(a[0]));
+            const hasDayData = dayEntries.length > 0;
+            const [topDay, topDayCount] = hasDayData ? dayEntries[0] : [null, 0];
+
+            const totalKnownConcepts = Object.values(conceptCounts).reduce((sum, val) => sum + val, 0);
+            const [topConcept, topConceptCount] = totalKnownConcepts
+                ? Object.entries(conceptCounts).sort((a, b) => b[1] - a[1])[0]
+                : ['—', 0];
+            const topConceptPercent = totalKnownConcepts ? ((topConceptCount / totalKnownConcepts) * 100).toFixed(1) : '0.0';
+
+            const uniqueContributors = Object.keys(contributorCounts).length || 1;
+            const avgSeeds = (allSeedsCache.length / uniqueContributors).toFixed(1);
+
+            const insights = [
+                { icon: '👥', label: 'most prolific contributor', value: `${escapeHtml(topContributor)} — ${topContributorCount} seed${topContributorCount === 1 ? '' : 's'}` },
+                { icon: '📅', label: 'most active day', value: hasDayData ? `${formatFullDate(topDay)} — ${topDayCount} seed${topDayCount === 1 ? '' : 's'}` : 'not enough data yet' },
+                { icon: '🪴', label: 'most popular concept', value: totalKnownConcepts ? `${topConcept} — ${topConceptPercent}%` : 'not enough data yet' },
+                { icon: '⚖️', label: 'average seeds per contributor', value: isFinite(Number(avgSeeds)) ? avgSeeds : '—' },
+                { icon: '🆕', label: 'newest seed', value: newestDate ? formatFullDate(newestDate) : 'unknown' }
+            ];
+
+            insightsList.innerHTML = insights.map((insight, i) => `
+                <div class="insight-card animate-in" style="animation-delay: ${0.3 + i * 0.05}s">
+                    <div class="insight-icon">${insight.icon}</div>
+                    <div class="insight-meta">
+                        <div class="insight-label">${insight.label}</div>
+                        <div class="insight-value">${insight.value}</div>
+                    </div>
+                </div>
+            `).join('');
         }
         
         function buildDensityGrid(seeds, counts, total) {
@@ -972,6 +1088,12 @@
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
+        }
+
+        function formatFullDate(dateInput) {
+            const date = new Date(dateInput);
+            if (isNaN(date.getTime())) return 'unknown date';
+            return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
         }
 
         function formatDate(dateStr) {
