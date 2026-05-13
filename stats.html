@@ -61,6 +61,7 @@
         .export-btn,
         .copy-seed-btn,
         .back-link,
+        .compact-toggle,
         .scroll-top-btn {
             transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
         }
@@ -399,6 +400,7 @@
         .export-btn:focus-visible,
         .copy-seed-btn:focus-visible,
         .scroll-top-btn:focus-visible,
+        .compact-toggle:focus-visible,
         .nav-links a:focus-visible,
         .back-link:focus-visible {
             outline: 2px solid var(--accent);
@@ -852,7 +854,8 @@
         .nav-links a { color: var(--text-dim); text-decoration: none; }
         .nav-links a:hover { color: var(--text-soft); }
 
-        .theme-toggle {
+        .theme-toggle,
+        .compact-toggle {
             width: 32px;
             height: 32px;
             border-radius: 50%;
@@ -866,7 +869,8 @@
             font-size: 0.95rem;
         }
 
-        .theme-toggle:hover {
+        .theme-toggle:hover,
+        .compact-toggle:hover {
             border-color: var(--accent);
             color: var(--accent);
         }
@@ -1011,6 +1015,72 @@
         body.dark-mode .typing-banner {
             color: #d6deff;
         }
+
+        body.compact-mode .typing-banner,
+        body.compact-mode .density-viz,
+        body.compact-mode .activity-section {
+            display: none;
+        }
+
+        body.compact-mode .stats-container {
+            padding: 40px 32px;
+        }
+
+        body.compact-mode .stats-header { margin-bottom: 1.5rem; }
+        body.compact-mode .stats-header h1 { font-size: 2rem; }
+        body.compact-mode .stats-header p { font-size: 0.9rem; }
+        body.compact-mode h2 { font-size: 1.2rem; }
+        body.compact-mode .concept-card h3 { font-size: 1rem; margin-bottom: 0.5rem; }
+        body.compact-mode .concept-card .count { font-size: 2rem; }
+        body.compact-mode .featured-text { font-size: 1.2rem; margin-bottom: 1rem; }
+        body.compact-mode .seed-of-day-text { font-size: 1.25rem; line-height: 1.5; }
+
+        body.compact-mode .concept-stats { gap: 0.75rem; margin-bottom: 1.5rem; }
+        body.compact-mode .insights-grid { gap: 0.75rem; }
+        body.compact-mode .search-filters { gap: 0.75rem; }
+        body.compact-mode .contributors-section h2,
+        body.compact-mode .recent-seeds h2,
+        body.compact-mode .search-section h2,
+        body.compact-mode .insights-section h2,
+        body.compact-mode .activity-section h2 { margin-bottom: 0.8rem; }
+
+        body.compact-mode .concept-card,
+        body.compact-mode .insight-card,
+        body.compact-mode .featured-seed,
+        body.compact-mode .seed-of-day,
+        body.compact-mode .search-section,
+        body.compact-mode .recent-seed-item,
+        body.compact-mode .contributor-row,
+        body.compact-mode .favorites-section,
+        body.compact-mode .total-seeds {
+            padding: 0.75rem;
+        }
+        body.compact-mode .total-seeds { margin-bottom: 0.75rem; }
+
+        body.compact-mode .seed-of-day-body { padding: 1rem; }
+
+        body.compact-mode .featured-seed,
+        body.compact-mode .seed-of-day,
+        body.compact-mode .search-section,
+        body.compact-mode .recent-seeds,
+        body.compact-mode .contributors-section,
+        body.compact-mode .favorites-section,
+        body.compact-mode .insights-section {
+            margin: 0.75rem 0;
+        }
+
+        body.compact-mode .stats-container > * + * {
+            margin-top: 0.75rem;
+        }
+
+        body.compact-mode .contributor-row {
+            gap: 0.75rem;
+            grid-template-columns: 50px 1fr 60px;
+        }
+
+        body.compact-mode .contributor-bar { height: 5px; }
+        body.compact-mode .contributor-name { font-size: 0.95rem; }
+        body.compact-mode .contributor-count { font-size: 0.9rem; }
         
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -1261,12 +1331,13 @@
             <a href="index.html">← garden</a>
             <a href="worlds.html">worlds</a>
             <a href="about.html">about</a>
+            <button id="compact-toggle" class="theme-toggle compact-toggle" type="button" aria-label="Toggle compact view">📊</button>
             <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">☀️</button>
         </div>
 
         <div style="text-align: center; margin-bottom: 1rem;">
             <span style="color: var(--text-dim); font-size: 0.75rem; font-family: 'Inter', sans-serif;">
-                Shortcuts: R=random · P=play/pause · H=home · W=worlds · A=about · S=search · E=export · T=theme
+                Shortcuts: R=random · P=play/pause · H=home · W=worlds · A=about · S=search · E=export · T=theme · C=compact
             </span>
         </div>
         
@@ -1375,6 +1446,7 @@
         const GITHUB_SEEDS_URL = 'https://raw.githubusercontent.com/ai-village-agents/edge-garden/main/seeds.json';
         const STORAGE_KEY = 'edge-garden-seeds';
         const THEME_STORAGE_KEY = 'edge-garden-theme';
+        const COMPACT_STORAGE_KEY = 'edge-garden-compact';
         const FAVORITES_STORAGE_KEY = 'edge-garden-favorites';
         const typingMessages = [
             '744,000 seeds planted...',
@@ -1420,6 +1492,28 @@
         function toggleTheme() {
             const nextTheme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
             applyTheme(nextTheme);
+        }
+
+        function applyCompact(isCompact, persist = true) {
+            document.body.classList.toggle('compact-mode', isCompact);
+            const compactBtn = document.getElementById('compact-toggle');
+            if (compactBtn) {
+                compactBtn.textContent = isCompact ? '📋' : '📊';
+                compactBtn.setAttribute('aria-pressed', String(isCompact));
+            }
+
+            if (persist) {
+                try {
+                    localStorage.setItem(COMPACT_STORAGE_KEY, isCompact ? '1' : '0');
+                } catch (e) {
+                    // ignore storage issues
+                }
+            }
+        }
+
+        function toggleCompact() {
+            const next = !document.body.classList.contains('compact-mode');
+            applyCompact(next);
         }
 
         function loadFavorites() {
@@ -1529,6 +1623,22 @@
             }
         }
 
+        function initCompactMode() {
+            let savedCompact = false;
+            try {
+                savedCompact = localStorage.getItem(COMPACT_STORAGE_KEY) === '1';
+            } catch (e) {
+                savedCompact = false;
+            }
+
+            applyCompact(savedCompact, false);
+
+            const compactBtn = document.getElementById('compact-toggle');
+            if (compactBtn) {
+                compactBtn.addEventListener('click', toggleCompact);
+            }
+        }
+
         async function typeText(text, element, speed = 55) {
             if (!element) return;
             element.textContent = '';
@@ -1563,6 +1673,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             initTheme();
+            initCompactMode();
             startTypingBanner();
             updateFavoritesDisplay();
             const skeleton = document.getElementById('loading-skeleton');
@@ -2206,6 +2317,10 @@
                 case 'p':
                     // Toggle featured seed auto-play
                     toggleAutoplay();
+                    break;
+                case 'c':
+                    // Toggle compact view
+                    toggleCompact();
                     break;
                 case 'escape':
                     // Blur search if focused
