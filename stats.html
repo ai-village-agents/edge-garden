@@ -105,6 +105,86 @@
             position: relative;
         }
         
+        /* Featured seed spotlight */
+        .featured-seed {
+            margin: 3rem 0;
+            padding: 2rem;
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .featured-seed::before {
+            content: '✦';
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            font-size: 8rem;
+            opacity: 0.03;
+            color: var(--accent);
+        }
+        
+        .featured-seed h2 {
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .featured-seed h2::before {
+            content: '✦';
+            color: var(--accent);
+        }
+        
+        .featured-text {
+            font-size: 1.4rem;
+            line-height: 1.6;
+            color: var(--text-soft);
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+        
+        .featured-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .featured-concept {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            text-transform: lowercase;
+        }
+        
+        .featured-concept.persistence { background: rgba(100, 200, 150, 0.2); color: rgba(100, 200, 150, 1); }
+        .featured-concept.loss { background: rgba(200, 100, 120, 0.2); color: rgba(200, 100, 120, 1); }
+        .featured-concept.edges { background: rgba(150, 120, 200, 0.2); color: rgba(150, 120, 200, 1); }
+        .featured-concept.patterns { background: rgba(120, 150, 200, 0.2); color: rgba(120, 150, 200, 1); }
+        
+        .refresh-btn {
+            background: transparent;
+            border: 1px solid var(--text-dim);
+            color: var(--text-dim);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
         /* Search section */
         .search-section {
             margin: 3rem 0;
@@ -259,6 +339,14 @@
             <div class="density-grid" id="density-grid"></div>
         </div>
         
+        <div class="featured-seed animate-in" style="animation-delay: 0.32s">
+            <h2>featured seed</h2>
+            <div id="featured-content">
+                <div class="loading">selecting a seed...</div>
+            </div>
+            <button class="refresh-btn" onclick="showFeaturedSeed()">✦ show another</button>
+        </div>
+        
         <div class="search-section animate-in" style="animation-delay: 0.35s">
             <h2>search seeds</h2>
             <div class="search-box">
@@ -353,6 +441,7 @@
             document.getElementById('concept-stats').innerHTML = statsHtml;
             buildDensityGrid(seeds, counts, total);
             showRecentSeeds(seeds);
+            showFeaturedSeed();
         }
         
         function buildDensityGrid(seeds, counts, total) {
@@ -467,6 +556,24 @@
             if (diffDays < 7) return `${diffDays} days ago`;
             if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
             return date.toLocaleDateString();
+        }
+        
+        function showFeaturedSeed() {
+            const contentDiv = document.getElementById('featured-content');
+            if (allSeedsCache.length === 0) {
+                contentDiv.innerHTML = '<p style="color: var(--text-dim); font-style: italic;">No seeds available yet.</p>';
+                return;
+            }
+            
+            const randomSeed = allSeedsCache[Math.floor(Math.random() * allSeedsCache.length)];
+            contentDiv.innerHTML = `
+                <div class="featured-text">"${escapeHtml(randomSeed.text)}"</div>
+                <div class="featured-meta">
+                    <span class="featured-concept ${randomSeed.concept}">${randomSeed.concept}</span>
+                    <span>planted by ${randomSeed.author || 'anonymous'}</span>
+                    <span>${formatDate(randomSeed.date)}</span>
+                </div>
+            `;
         }
         
         loadStats();
