@@ -37,6 +37,7 @@
         .insight-card,
         .density-viz,
         .featured-seed,
+        .seed-of-day,
         .search-section,
         .recent-seed-item,
         .contributor-row,
@@ -399,6 +400,96 @@
             border-color: var(--accent);
             color: var(--accent);
         }
+
+        /* Seed of the Day */
+        .seed-of-day {
+            margin: 3rem 0;
+            padding: 2rem;
+            border-radius: 14px;
+            border: 2px solid transparent;
+            background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)) padding-box,
+                        linear-gradient(135deg, #f0c14b, #daa520, #cd853f) border-box;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .seed-of-day::before {
+            content: '✺';
+            position: absolute;
+            top: -30px;
+            left: -20px;
+            font-size: 7rem;
+            opacity: 0.05;
+            color: #daa520;
+        }
+
+        .seed-of-day:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 40px rgba(218, 165, 32, 0.25);
+        }
+
+        .seed-of-day-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .seed-of-day-header h2 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0;
+        }
+
+        .seed-of-day-date {
+            color: var(--text-dim);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+        }
+
+        .seed-of-day-body {
+            border-radius: 10px;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(240, 193, 75, 0.25);
+        }
+
+        .seed-of-day-text {
+            font-size: 1.5rem;
+            line-height: 1.7;
+            color: var(--text-soft);
+            font-style: italic;
+            margin-bottom: 1rem;
+        }
+
+        .seed-of-day-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .seed-of-day-concept {
+            padding: 0.3rem 0.8rem;
+            border-radius: 999px;
+            background: rgba(240, 193, 75, 0.15);
+            color: #b8860b;
+            font-weight: 600;
+            text-transform: lowercase;
+        }
+
+        .seed-of-day-tagline {
+            margin-top: 1rem;
+            color: #b8860b;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.04em;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
         
         /* Search section */
         .search-section {
@@ -661,7 +752,8 @@
         body.dark-mode .contributor-row,
         body.dark-mode .insight-card,
         body.dark-mode .insights-section,
-        body.dark-mode .concept-card {
+        body.dark-mode .concept-card,
+        body.dark-mode .seed-of-day {
             background: #16213e;
             border-color: #2a3f5f;
         }
@@ -685,6 +777,27 @@
         body.dark-mode .featured-concept.loss { background: rgba(200, 100, 120, 0.2); color: rgba(200, 100, 120, 0.95); }
         body.dark-mode .featured-concept.edges { background: rgba(150, 120, 200, 0.2); color: rgba(150, 120, 200, 0.95); }
         body.dark-mode .featured-concept.patterns { background: rgba(120, 150, 200, 0.2); color: rgba(120, 150, 200, 0.95); }
+
+        body.dark-mode .seed-of-day {
+            background: linear-gradient(135deg, #16213e, #16213e) padding-box,
+                        linear-gradient(135deg, #f0c14b, #daa520, #cd853f) border-box;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+            border-color: transparent;
+        }
+
+        body.dark-mode .seed-of-day-body {
+            background: #0f162d;
+            border-color: rgba(240, 193, 75, 0.25);
+        }
+
+        body.dark-mode .seed-of-day-text {
+            color: #e9e5d6;
+        }
+
+        body.dark-mode .seed-of-day-tagline,
+        body.dark-mode .seed-of-day-concept {
+            color: #f0c14b;
+        }
 
         body.dark-mode .bar-container,
         body.dark-mode .contributor-bar {
@@ -987,20 +1100,31 @@
             </div>
         </div>
         
-        <div class="density-viz animate-in" style="animation-delay: 0.3s">
-            <h2>pattern density</h2>
-            <p style="text-align: center; color: var(--text-dim); margin-bottom: 1.5rem; font-size: 0.9rem;">
-                each cell represents seeds by concept — color shows which edge
-            </p>
-            <div class="density-grid" id="density-grid" role="region" aria-label="Pattern density visualization"></div>
-        </div>
-        
         <div class="featured-seed animate-in" role="region" aria-label="Featured seed spotlight" style="animation-delay: 0.32s">
             <h2>featured seed</h2>
             <div id="featured-content">
                 <div class="loading">selecting a seed...</div>
             </div>
             <button class="refresh-btn" aria-label="Show another random seed" onclick="showFeaturedSeed()">✦ show another</button>
+        </div>
+
+        <div class="seed-of-day animate-in" id="seed-of-day" role="region" aria-label="Seed of the day" style="animation-delay: 0.33s">
+            <div class="seed-of-day-header">
+                <h2>🌱 Seed of the Day</h2>
+                <div class="seed-of-day-date" id="seed-of-day-date"></div>
+            </div>
+            <div class="seed-of-day-body" id="seed-of-day-body">
+                <div class="loading">gathering today's meditation...</div>
+            </div>
+            <div class="seed-of-day-tagline">Today's meditation</div>
+        </div>
+        
+        <div class="density-viz animate-in" style="animation-delay: 0.36s">
+            <h2>pattern density</h2>
+            <p style="text-align: center; color: var(--text-dim); margin-bottom: 1.5rem; font-size: 0.9rem;">
+                each cell represents seeds by concept — color shows which edge
+            </p>
+            <div class="density-grid" id="density-grid" role="region" aria-label="Pattern density visualization"></div>
         </div>
         
         <div class="search-section animate-in" style="animation-delay: 0.35s">
@@ -1202,6 +1326,7 @@
             });
             buildDensityGrid(seeds, counts, total);
             showRecentSeeds(seeds);
+            showSeedOfDay(seeds);
             showFeaturedSeed();
         }
 
@@ -1487,6 +1612,54 @@
 
         function formatShortLabel(date) {
             return `${date.toLocaleString('default', { month: 'short' }).charAt(0)} ${date.getDate()}`;
+        }
+
+        function getSeedOfDay(seeds) {
+            if (!Array.isArray(seeds) || seeds.length === 0) return null;
+
+            const dateKey = formatDateKey(new Date());
+            let hash = 0;
+
+            for (let i = 0; i < dateKey.length; i++) {
+                hash = (hash * 31 + dateKey.charCodeAt(i)) >>> 0;
+            }
+
+            const index = hash % seeds.length;
+            return seeds[index];
+        }
+
+        function showSeedOfDay(seeds = allSeedsCache) {
+            const container = document.getElementById('seed-of-day-body');
+            const dateLabel = document.getElementById('seed-of-day-date');
+
+            if (dateLabel) {
+                const today = new Date();
+                dateLabel.textContent = today.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+            }
+
+            if (!container) return;
+
+            if (!Array.isArray(seeds) || seeds.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-dim); font-style: italic;">Plant a seed to see today\'s meditation.</p>';
+                return;
+            }
+
+            const seed = getSeedOfDay(seeds);
+            if (!seed) {
+                container.innerHTML = '<p style="color: var(--text-dim); font-style: italic;">No seed available for today.</p>';
+                return;
+            }
+
+            const conceptLabel = seed.concept || 'unknown';
+
+            container.innerHTML = `
+                <div class="seed-of-day-text">"${escapeHtml(seed.text || '')}"</div>
+                <div class="seed-of-day-meta">
+                    <span class="seed-of-day-concept">${conceptLabel}</span>
+                    <span>planted by ${seed.author || 'anonymous'}</span>
+                    <span>${formatDate(seed.date)}</span>
+                </div>
+            `;
         }
         
         function showFeaturedSeed() {
