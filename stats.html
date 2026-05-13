@@ -537,6 +537,63 @@
             .density-grid { gap: 1px; grid-template-columns: repeat(60, 1fr); }
             .density-cell { border-radius: 1px; }
         }
+
+        @media print {
+            :root {
+                --text-light: #000;
+                --text-soft: #000;
+                --text-dim: #000;
+                --accent: #000;
+            }
+
+            body {
+                background: #fff !important;
+                color: #000 !important;
+            }
+
+            .stats-container,
+            .total-seeds,
+            .density-viz,
+            .featured-seed,
+            .search-section,
+            .recent-seed-item,
+            .contributor-row,
+            .concept-card {
+                background: #fff !important;
+                color: #000 !important;
+                border-color: #000 !important;
+                box-shadow: none !important;
+                max-width: 100% !important;
+            }
+
+            .share-btn,
+            .export-btn,
+            .scroll-top-btn,
+            .back-link,
+            .search-section,
+            .refresh-btn {
+                display: none !important;
+            }
+
+            *, *::before, *::after {
+                animation: none !important;
+                transition: none !important;
+            }
+
+            .concept-card,
+            .recent-seed-item,
+            .contributor-row,
+            .featured-seed,
+            .density-viz {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            a[href]::after {
+                content: ' (' attr(href) ')';
+                font-size: 0.85em;
+            }
+        }
     </style>
 </head>
 <body>
