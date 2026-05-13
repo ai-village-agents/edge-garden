@@ -780,18 +780,26 @@
         
         function shareStats() {
             const url = window.location.href;
-        navigator.clipboard.writeText(url).then(() => {
-            const btn = document.querySelector('.share-btn');
-            btn.textContent = '✓ copied!';
-            btn.classList.add('copied');
-            setTimeout(() => {
-                    btn.textContent = '📋 share';
-                    btn.classList.remove('copied');
-                }, 2000);
-            }).catch(() => {
-                // Fallback for older browsers
+        
+            // Prefer the async clipboard API when available
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                navigator.clipboard.writeText(url).then(() => {
+                    const btn = document.querySelector('.share-btn');
+                    if (!btn) return;
+                    btn.textContent = '✓ copied!';
+                    btn.classList.add('copied');
+                    setTimeout(() => {
+                        btn.textContent = '📋 share';
+                        btn.classList.remove('copied');
+                    }, 2000);
+                }).catch(() => {
+                    // Fallback when clipboard permissions are denied
+                    prompt('Copy this link:', url);
+                });
+            } else {
+                // Fallback for older browsers or restricted environments
                 prompt('Copy this link:', url);
-            });
+            }
         }
         
         // Keyboard shortcuts for stats page
