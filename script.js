@@ -640,6 +640,34 @@ console.log(`
                 focusedEdgeIndex = -1;
                 highlightEdge(-1);
                 break;
+            case 'r': case 'R':
+                // Random concept
+                e.preventDefault();
+                const conceptKeys = Object.keys(concepts || {});
+                if (conceptKeys.length > 0) {
+                    const randomConcept = conceptKeys[Math.floor(Math.random() * conceptKeys.length)];
+                    if (typeof showConcept === 'function') showConcept(randomConcept);
+                }
+                break;
+            case 'h': case 'H':
+                // Home/welcome
+                e.preventDefault();
+                if (typeof showView === 'function') showView('welcome');
+                focusedEdgeIndex = -1;
+                highlightEdge(-1);
+                break;
+            case 'a': case 'A':
+                // All seeds
+                e.preventDefault();
+                if (typeof showAllSeeds === 'function') showAllSeeds();
+                break;
+            case 's': case 'S':
+                // Open statistics page
+                if (!e.ctrlKey && !e.metaKey) {
+                    e.preventDefault();
+                    window.location.href = 'stats.html';
+                }
+                break;
             case '1': case '2': case '3': case '4':
                 // Number keys for quick access
                 const num = parseInt(e.key) - 1;
