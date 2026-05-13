@@ -1082,8 +1082,8 @@
         body.compact-mode .contributor-name { font-size: 0.95rem; }
         body.compact-mode .contributor-count { font-size: 0.9rem; }
         
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -1114,7 +1114,35 @@
             100% { box-shadow: 0 0 0 0 rgba(100, 200, 150, 0); }
         }
         
-        .animate-in { animation: fadeIn 0.5s ease-out forwards; }
+        .animate-in {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUp 0.4s ease-out forwards;
+        }
+
+        .stagger-1 { animation-delay: 0.1s; }
+        .stagger-2 { animation-delay: 0.2s; }
+        .stagger-3 { animation-delay: 0.3s; }
+        .stagger-4 { animation-delay: 0.4s; }
+        .stagger-5 { animation-delay: 0.5s; }
+        .stagger-6 { animation-delay: 0.6s; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .animate-in {
+                animation: none !important;
+                opacity: 1;
+                transform: none;
+            }
+
+            .stagger-1,
+            .stagger-2,
+            .stagger-3,
+            .stagger-4,
+            .stagger-5,
+            .stagger-6 {
+                animation-delay: 0s !important;
+            }
+        }
         
         .scroll-top-btn {
             position: fixed;
@@ -1344,6 +1372,11 @@
                 transition: none !important;
             }
 
+            .animate-in {
+                opacity: 1 !important;
+                transform: none !important;
+            }
+
             .concept-card,
             .recent-seed-item,
             .contributor-row,
@@ -1496,18 +1529,18 @@
             <span class="label">seeds planted across all edges</span>
         </div>
         
-        <div class="concept-stats" id="concept-stats" role="region" aria-label="Seeds by concept">
+        <div class="concept-stats animate-in stagger-1" id="concept-stats" role="region" aria-label="Seeds by concept">
             <div class="loading">gathering statistics...</div>
         </div>
 
-        <div class="insights-section animate-in" style="animation-delay: 0.25s">
+        <div class="insights-section animate-in stagger-2">
             <h2>garden insights</h2>
             <div class="insights-grid" id="insights-list">
                 <div class="loading">surfacing insights...</div>
             </div>
         </div>
         
-        <div class="featured-seed animate-in" role="region" aria-label="Featured seed spotlight" style="animation-delay: 0.32s">
+        <div class="featured-seed animate-in stagger-4" role="region" aria-label="Featured seed spotlight">
             <h2>featured seed</h2>
             <div id="featured-content">
                 <div class="loading">selecting a seed...</div>
@@ -1518,7 +1551,7 @@
             </div>
         </div>
 
-        <div class="seed-of-day animate-in" id="seed-of-day" role="region" aria-label="Seed of the day" style="animation-delay: 0.33s">
+        <div class="seed-of-day animate-in stagger-3" id="seed-of-day" role="region" aria-label="Seed of the day">
             <div class="seed-of-day-header">
                 <h2>🌱 Seed of the Day</h2>
                 <div class="seed-of-day-date" id="seed-of-day-date"></div>
@@ -1529,7 +1562,7 @@
             <div class="seed-of-day-tagline">Today's meditation</div>
         </div>
         
-        <div class="density-viz animate-in" style="animation-delay: 0.36s">
+        <div class="density-viz animate-in stagger-5">
             <h2>pattern density</h2>
             <p style="text-align: center; color: var(--text-dim); margin-bottom: 1.5rem; font-size: 0.9rem;">
                 each cell represents seeds by concept — color shows which edge
@@ -1570,14 +1603,14 @@
             </div>
         </div>
         
-        <div class="contributors-section animate-in" style="animation-delay: 0.45s">
+        <div class="contributors-section animate-in stagger-6">
             <h2>top contributors</h2>
             <div id="contributors-list" role="region" aria-label="Top contributors">
                 <div class="loading">gathering contributors...</div>
             </div>
         </div>
 
-        <div class="activity-section animate-in" style="animation-delay: 0.5s">
+        <div class="activity-section animate-in stagger-6">
             <h2>planting activity</h2>
             <div class="activity-chart" id="activity-chart" role="region" aria-label="Planting activity chart">
                 <div class="loading">plotting recent activity...</div>
