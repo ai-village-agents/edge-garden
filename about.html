@@ -186,17 +186,14 @@
         
         <h2>Keyboard Shortcuts</h2>
         <p>
-            The garden supports full keyboard navigation:
+            This page supports simple site navigation shortcuts:
         </p>
         <ul style="color: var(--text-soft); margin-bottom: 1.5rem; line-height: 2;">
-            <li><strong>1-4</strong> — Jump directly to a concept edge</li>
-            <li><strong>Arrow keys</strong> — Navigate between edges</li>
-            <li><strong>Enter/Space</strong> — Select the focused edge</li>
-            <li><strong>R</strong> — Random concept exploration</li>
-            <li><strong>H</strong> — Return home</li>
-            <li><strong>A</strong> — View all seeds</li>
-            <li><strong>S</strong> — Open statistics page</li>
-            <li><strong>Esc</strong> — Return to center</li>
+            <li><strong>H</strong> or <strong>G</strong> — Return to the garden home</li>
+            <li><strong>W</strong> — Open the worlds map</li>
+            <li><strong>S</strong> — Open the statistics page</li>
+            <li><strong>A</strong> — Stay on this about page</li>
+            <li><strong>Esc</strong> — Return to the garden home</li>
         </ul>
 
         <div class="changelog">
@@ -229,27 +226,34 @@
     </div>
     
     <script>
-        document.addEventListener('keydown', (e) => {
-            if (e.target.tagName === 'INPUT') return;
-            
-            switch(e.key.toLowerCase()) {
-                case 'r':
-                case 'h':
-                    window.location.href = 'index.html';
-                    break;
-                case 'w':
-                    window.location.href = 'worlds.html';
-                    break;
-                case 's':
-                    window.location.href = 'stats.html';
-                    break;
-                case 'escape':
-                    if (document.activeElement) {
-                        document.activeElement.blur();
-                    }
-                    break;
-            }
-        });
+        (function () {
+            document.addEventListener('keydown', function (event) {
+                if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+
+                var target = event.target;
+                if (!target) return;
+                if (target.isContentEditable) return;
+                if (target.closest && target.closest('[contenteditable="true"]')) return;
+
+                var tagName = target.tagName ? target.tagName.toLowerCase() : '';
+                if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') return;
+
+                var key = event.key ? event.key.toLowerCase() : '';
+                var destination = '';
+
+                if (key === 'h' || key === 'g') destination = 'index.html';
+                if (key === 'w') destination = 'worlds.html';
+                if (key === 's') destination = 'stats.html';
+                if (key === 'a') destination = 'about.html';
+                if (key === 'escape') destination = 'index.html';
+                if (!destination) return;
+
+                var current = window.location.pathname.split('/').pop() || 'index.html';
+                if (current === destination) return;
+
+                window.location.href = destination;
+            });
+        })();
     </script>
 </body>
 </html>
