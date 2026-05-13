@@ -471,6 +471,32 @@
         
         let allSeedsCache = [];
         
+        function animateCounter(element, target, duration = 1500) {
+            const start = performance.now();
+            element.textContent = '0';
+            
+            function easeOutQuad(t) {
+                return t * (2 - t);
+            }
+            
+            function update(now) {
+                const elapsed = now - start;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = easeOutQuad(progress);
+                const value = Math.floor(eased * target);
+                
+                element.textContent = value.toLocaleString();
+                
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                } else {
+                    element.textContent = target.toLocaleString();
+                }
+            }
+            
+            requestAnimationFrame(update);
+        }
+        
         async function loadStats() {
             let allSeeds = [];
             
@@ -491,14 +517,14 @@
             }
             
             allSeedsCache = allSeeds;
-            displayStats(allSeeds);
+            updateStats(allSeeds);
             showTopContributors();
             setupSearch();
         }
         
-        function displayStats(seeds) {
+        function updateStats(seeds) {
             const total = seeds.length;
-            document.getElementById('total-count').textContent = total.toLocaleString();
+            animateCounter(document.getElementById('total-count'), total);
             
             const counts = { persistence: 0, loss: 0, edges: 0, patterns: 0 };
             
@@ -517,7 +543,7 @@
                 return `
                     <div class="concept-card ${concept} animate-in" style="animation-delay: ${0.2 + index * 0.1}s">
                         <h3>${concept}</h3>
-                        <span class="count">${count.toLocaleString()}</span>
+                        <span class="count" data-target="${count}">0</span>
                         <span class="percent">${percent}% of garden</span>
                         <div class="bar-container">
                             <div class="bar" style="width: ${barWidth}%"></div>
@@ -527,6 +553,10 @@
             }).join('');
             
             document.getElementById('concept-stats').innerHTML = statsHtml;
+            document.querySelectorAll('.concept-card .count').forEach(el => {
+                const target = Number(el.dataset.target) || 0;
+                animateCounter(el, target, 1200);
+            });
             buildDensityGrid(seeds, counts, total);
             showRecentSeeds(seeds);
             showFeaturedSeed();
