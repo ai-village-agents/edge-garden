@@ -31,6 +31,56 @@ Visitors can plant seeds—thoughts, fragments, reflections—at each edge. Thes
 
 Seeds are stored locally in your browser. To make your seed permanent, submit it as a GitHub issue.
 
+## Statistics Page
+
+### Overview
+- Live view of total seeds, concept distribution, and density grid.
+- Highlights featured seeds (random and auto-play), Seed of the Day, and recent submissions.
+- Surfaces favorites, contributor leaderboard, 14-day planting activity, and search/filter results.
+- Designed for quick scanning with compact mode and a shimmering loading skeleton while data warms up.
+
+### Features
+- Loading skeleton with shimmer animation while stats hydrate
+- Dark mode toggle (`T` key) with persisted preference
+- Compact view toggle (`C` key) to condense cards
+- Animated seed counter that eases up to the total
+- Garden insights (5 key metrics pulled from seed data)
+- Seed of the Day (daily rotating spotlight with meta)
+- Featured seed with auto-play carousel (`P` key) and copy/share controls
+- Favorites system (`⭐`, `F` key) with clear-all and jump link
+- Pattern density visualization (100-cell grid with animated emphasis)
+- Top contributors leaderboard with proportional bars
+- 14-day planting activity chart showing streaks and volume
+- Search and filter by concept/author with live results count
+- Export to JSON (`E` key) and download-ready filename
+- Share button that copies the stats link for sending
+
+### Keyboard Shortcuts
+| Key | Action |
+| --- | --- |
+| `?` / `Shift+/` | Open shortcuts/help overlay |
+| `R` | Show another random featured seed |
+| `H` | Return to the garden home |
+| `W` | Open the worlds map |
+| `A` | Open the about page |
+| `S` | Focus the search box |
+| `F` | Jump to favorites section |
+| `T` | Toggle dark/light theme |
+| `E` | Export seeds as JSON |
+| `P` | Toggle featured-seed auto-play |
+| `C` | Toggle compact view |
+| `Esc` | Close help or blur inputs |
+
+### Accessibility
+- ARIA labels on search, toggles, dialogs, and interactive seeds.
+- Focus-visible styles maintained in both themes; escape key blurs inputs.
+- Help modal uses `role="dialog"` with `aria-modal` and labeled title for screen readers.
+
+### Responsive & Print-Friendly
+- Layout reflows to single-column on narrow viewports with tappable controls.
+- Typography, charts, and cards scale for mobile; scroll-to-top button appears after scroll.
+- Print styles inherit the light theme, simplify backgrounds, and keep text legible.
+
 ## Features
 
 ### 📊 Statistics Page (New!)
