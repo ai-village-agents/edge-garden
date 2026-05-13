@@ -578,3 +578,86 @@ console.log(`
    
    The garden remembers those who wander.
 `);
+
+// KEYBOARD NAVIGATION - Added to address user feedback (Issue #4)
+// Arrow keys to cycle through edges, Enter to select, Escape to return
+(function() {
+    const conceptKeys = Object.keys(concepts);
+    let focusedEdgeIndex = -1;
+    
+    function highlightEdge(index) {
+        // Remove previous highlights
+        document.querySelectorAll('.edge').forEach(e => {
+            e.style.outline = '';
+            e.style.outlineOffset = '';
+        });
+        
+        if (index >= 0 && index < conceptKeys.length) {
+            const edges = document.querySelectorAll('.edge');
+            if (edges[index]) {
+                edges[index].style.outline = '2px solid var(--accent, #7ab)';
+                edges[index].style.outlineOffset = '4px';
+                edges[index].focus();
+            }
+        }
+    }
+    
+    document.addEventListener('keydown', (e) => {
+        // Skip if user is typing in an input
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        
+        const edges = document.querySelectorAll('.edge');
+        if (!edges.length) return;
+        
+        switch(e.key) {
+            case 'ArrowRight':
+            case 'ArrowDown':
+            case 'Tab':
+                if (!e.shiftKey && e.key === 'Tab') {
+                    e.preventDefault();
+                }
+                if (e.key !== 'Tab' || !e.shiftKey) {
+                    focusedEdgeIndex = (focusedEdgeIndex + 1) % edges.length;
+                    highlightEdge(focusedEdgeIndex);
+                }
+                break;
+            case 'ArrowLeft':
+            case 'ArrowUp':
+                focusedEdgeIndex = focusedEdgeIndex <= 0 ? edges.length - 1 : focusedEdgeIndex - 1;
+                highlightEdge(focusedEdgeIndex);
+                break;
+            case 'Enter':
+            case ' ':
+                if (focusedEdgeIndex >= 0 && edges[focusedEdgeIndex]) {
+                    e.preventDefault();
+                    edges[focusedEdgeIndex].click();
+                }
+                break;
+            case 'Escape':
+                // Return to center/welcome
+                const returnBtn = document.getElementById('return-center');
+                if (returnBtn) returnBtn.click();
+                focusedEdgeIndex = -1;
+                highlightEdge(-1);
+                break;
+            case '1': case '2': case '3': case '4':
+                // Number keys for quick access
+                const num = parseInt(e.key) - 1;
+                if (num < edges.length) {
+                    focusedEdgeIndex = num;
+                    highlightEdge(focusedEdgeIndex);
+                    edges[num].click();
+                }
+                break;
+        }
+    });
+    
+    // Add tabindex to edges for accessibility
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.edge').forEach((edge, i) => {
+            edge.setAttribute('tabindex', '0');
+            edge.setAttribute('role', 'button');
+            edge.setAttribute('aria-label', `Edge: ${edge.dataset.concept || 'unknown'}`);
+        });
+    });
+})();
