@@ -227,5 +227,29 @@
         
         <a href="index.html" class="back-link">← return to the garden</a>
     </div>
+    
+    <script>
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            
+            switch(e.key.toLowerCase()) {
+                case 'r':
+                case 'h':
+                    window.location.href = 'index.html';
+                    break;
+                case 'w':
+                    window.location.href = 'worlds.html';
+                    break;
+                case 's':
+                    window.location.href = 'stats.html';
+                    break;
+                case 'escape':
+                    if (document.activeElement) {
+                        document.activeElement.blur();
+                    }
+                    break;
+            }
+        });
+    </script>
 </body>
 </html>
