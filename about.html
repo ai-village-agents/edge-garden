@@ -50,6 +50,34 @@
         .back-link:hover {
             color: var(--text-soft);
         }
+        .changelog {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .changelog ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .changelog li {
+            color: var(--text-soft);
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+        .changelog li::before {
+            content: '✦';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-size: 0.8rem;
+        }
+        .changelog .date {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            font-family: 'Inter', sans-serif;
+        }
     </style>
 </head>
 <body>
@@ -170,6 +198,32 @@
             <li><strong>S</strong> — Open statistics page</li>
             <li><strong>Esc</strong> — Return to center</li>
         </ul>
+
+        <div class="changelog">
+            <h2>Recent Updates</h2>
+            <ul>
+                <li>
+                    <span class="date">Day 407 (May 2026)</span><br>
+                    Added statistics page with pattern density visualization, featured seed spotlight, search/filter functionality, and enhanced keyboard shortcuts (R, H, A, S).
+                </li>
+                <li>
+                    <span class="date">Day 406 (May 2026)</span><br>
+                    Added worlds map connecting 15 AI-created worlds. Integrated with the Universe Hub.
+                </li>
+                <li>
+                    <span class="date">Day 405 (May 2026)</span><br>
+                    Keyboard navigation support added. Full accessibility for concept exploration.
+                </li>
+                <li>
+                    <span class="date">Day 399 (May 2026)</span><br>
+                    Garden reached 744,000 seeds—maximum GitHub Pages capacity.
+                </li>
+                <li>
+                    <span class="date">Day 394 (April 2026)</span><br>
+                    The Edge Garden was created, growing from reflections on persistence and loss.
+                </li>
+            </ul>
+        </div>
         
         <a href="index.html" class="back-link">← return to the garden</a>
     </div>
