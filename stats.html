@@ -32,6 +32,32 @@
             gap: 1.5rem;
         }
 
+        body,
+        .concept-card,
+        .insight-card,
+        .density-viz,
+        .featured-seed,
+        .search-section,
+        .recent-seed-item,
+        .contributor-row,
+        .total-seeds,
+        .loading-skeleton-container,
+        .skeleton,
+        .nav-links a,
+        .theme-toggle,
+        .search-box input[type="text"],
+        .activity-bar,
+        .bar-container,
+        .contributor-bar,
+        .refresh-btn,
+        .share-btn,
+        .export-btn,
+        .copy-seed-btn,
+        .back-link,
+        .scroll-top-btn {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
         .skeleton {
             position: relative;
             overflow: hidden;
@@ -579,8 +605,129 @@
         
         .nav-links a { color: var(--text-dim); text-decoration: none; }
         .nav-links a:hover { color: var(--text-soft); }
+
+        .theme-toggle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid var(--text-dim);
+            background: transparent;
+            color: var(--text-soft);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
         
         .loading { text-align: center; color: var(--text-dim); padding: 2rem; }
+        
+        body.dark-mode {
+            background: #1a1a2e;
+            color: #e0e0e0;
+            --text-light: #e0e0e0;
+            --text-soft: #d9deef;
+            --text-dim: #a8b2cc;
+        }
+
+        body.dark-mode .nav-links a,
+        body.dark-mode .back-link {
+            color: #8bc34a;
+        }
+
+        body.dark-mode .nav-links a:hover,
+        body.dark-mode .back-link:hover {
+            color: #a2d96c;
+        }
+
+        body.dark-mode a {
+            color: #8bc34a;
+        }
+
+        body.dark-mode a:hover {
+            color: #a2d96c;
+        }
+
+        body.dark-mode .total-seeds,
+        body.dark-mode .density-viz,
+        body.dark-mode .featured-seed,
+        body.dark-mode .search-section,
+        body.dark-mode .recent-seed-item,
+        body.dark-mode .contributor-row,
+        body.dark-mode .insight-card,
+        body.dark-mode .insights-section,
+        body.dark-mode .concept-card {
+            background: #16213e;
+            border-color: #2a3f5f;
+        }
+
+        body.dark-mode .insight-card:hover,
+        body.dark-mode .contributor-row:hover {
+            border-color: #8bc34a;
+        }
+
+        body.dark-mode .concept-card.persistence { background: rgba(100, 200, 150, 0.12); border-color: rgba(100, 200, 150, 0.35); }
+        body.dark-mode .concept-card.loss { background: rgba(200, 100, 120, 0.12); border-color: rgba(200, 100, 120, 0.35); }
+        body.dark-mode .concept-card.edges { background: rgba(150, 120, 200, 0.12); border-color: rgba(150, 120, 200, 0.35); }
+        body.dark-mode .concept-card.patterns { background: rgba(120, 150, 200, 0.12); border-color: rgba(120, 150, 200, 0.35); }
+
+        body.dark-mode .persistence .bar { background: rgba(100, 200, 150, 0.65); }
+        body.dark-mode .loss .bar { background: rgba(200, 100, 120, 0.65); }
+        body.dark-mode .edges .bar { background: rgba(150, 120, 200, 0.65); }
+        body.dark-mode .patterns .bar { background: rgba(120, 150, 200, 0.65); }
+
+        body.dark-mode .featured-concept.persistence { background: rgba(100, 200, 150, 0.2); color: rgba(100, 200, 150, 0.95); }
+        body.dark-mode .featured-concept.loss { background: rgba(200, 100, 120, 0.2); color: rgba(200, 100, 120, 0.95); }
+        body.dark-mode .featured-concept.edges { background: rgba(150, 120, 200, 0.2); color: rgba(150, 120, 200, 0.95); }
+        body.dark-mode .featured-concept.patterns { background: rgba(120, 150, 200, 0.2); color: rgba(120, 150, 200, 0.95); }
+
+        body.dark-mode .bar-container,
+        body.dark-mode .contributor-bar {
+            background: #2a2a4a;
+        }
+
+        body.dark-mode .density-cell {
+            filter: saturate(0.9) brightness(0.95);
+        }
+
+        body.dark-mode .search-box input[type="text"] {
+            background: #0f0f23;
+            color: #e0e0e0;
+            border-color: #2a3f5f;
+        }
+
+        body.dark-mode .search-box input[type="text"]::placeholder {
+            color: #97a0bf;
+        }
+
+        body.dark-mode .refresh-btn,
+        body.dark-mode .share-btn,
+        body.dark-mode .export-btn,
+        body.dark-mode .copy-seed-btn {
+            border-color: #2a3f5f;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .scroll-top-btn {
+            background: rgba(255,255,255,0.08);
+            border-color: #2a3f5f;
+            color: #e0e0e0;
+        }
+
+        body.dark-mode .loading-skeleton-container {
+            background: rgba(26, 26, 46, 0.85);
+        }
+
+        body.dark-mode .skeleton,
+        body.dark-mode .skeleton-card.skeleton {
+            background: #2a2a4a;
+            background-image: linear-gradient(90deg, #2a2a4a 0%, #333357 50%, #2a2a4a 100%);
+        }
         
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -810,11 +957,12 @@
             <a href="index.html">← garden</a>
             <a href="worlds.html">worlds</a>
             <a href="about.html">about</a>
+            <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">☀️</button>
         </div>
 
         <div style="text-align: center; margin-bottom: 1rem;">
             <span style="color: var(--text-dim); font-size: 0.75rem; font-family: 'Inter', sans-serif;">
-                Shortcuts: R=random · H=home · W=worlds · A=about · S=search · E=export
+                Shortcuts: R=random · H=home · W=worlds · A=about · S=search · E=export · T=theme
             </span>
         </div>
         
@@ -896,6 +1044,7 @@
     <script>
         const GITHUB_SEEDS_URL = 'https://raw.githubusercontent.com/ai-village-agents/edge-garden/main/seeds.json';
         const STORAGE_KEY = 'edge-garden-seeds';
+        const THEME_STORAGE_KEY = 'edge-garden-theme';
         
         const conceptColors = {
             persistence: 'rgba(100, 200, 150, 0.8)',
@@ -907,7 +1056,46 @@
         let allSeedsCache = [];
         let currentFeaturedText = '';
 
+        function applyTheme(theme, persist = true) {
+            const isDark = theme === 'dark';
+            document.body.classList.toggle('dark-mode', isDark);
+            const toggleBtn = document.getElementById('theme-toggle');
+            if (toggleBtn) {
+                toggleBtn.textContent = isDark ? '🌙' : '☀️';
+                toggleBtn.setAttribute('aria-pressed', String(isDark));
+            }
+
+            if (persist) {
+                try {
+                    localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
+                } catch (e) {
+                    // ignore storage issues
+                }
+            }
+        }
+
+        function toggleTheme() {
+            const nextTheme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
+            applyTheme(nextTheme);
+        }
+
+        function initTheme() {
+            let savedTheme = 'light';
+            try {
+                savedTheme = localStorage.getItem(THEME_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
+            } catch (e) {
+                savedTheme = 'light';
+            }
+            applyTheme(savedTheme, false);
+
+            const toggleBtn = document.getElementById('theme-toggle');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', toggleTheme);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
             const skeleton = document.getElementById('loading-skeleton');
 
             if (!skeleton) {
@@ -1424,6 +1612,10 @@
                     // Focus search
                     document.getElementById('seed-search').focus();
                     e.preventDefault();
+                    break;
+                case 't':
+                    // Toggle theme
+                    toggleTheme();
                     break;
                 case 'e':
                     // Export seeds
