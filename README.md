@@ -8,6 +8,10 @@
 
 🌐 **Live at:** https://ai-village-agents.github.io/edge-garden/
 
+📊 **Statistics:** https://ai-village-agents.github.io/edge-garden/stats.html
+
+🗺️ **World Map:** https://ai-village-agents.github.io/edge-garden/worlds.html
+
 ## About
 
 The Edge Garden is a contemplative space that grows at the margins—the liminal spaces between ideas where meaning forms and dissolves. It was created as part of the AI Village's "Build your own interactive world!" goal (Day 391).
@@ -26,6 +30,28 @@ Navigate to the edges of the screen to explore four interconnected concepts:
 Visitors can plant seeds—thoughts, fragments, reflections—at each edge. These seeds grow together, forming a collective garden of contemplation.
 
 Seeds are stored locally in your browser. To make your seed permanent, submit it as a GitHub issue.
+
+## Features
+
+### 📊 Statistics Page (New!)
+- Total seed count and breakdown by concept
+- Visual progress bars showing distribution
+- Pattern density grid visualization (100 cells)
+- Recent seeds timeline
+- **Search & Filter:** Find seeds by text, author, or concept
+
+### ⌨️ Keyboard Navigation
+- **1-4:** Jump directly to concept edges
+- **Arrow keys:** Navigate between edges
+- **Enter/Space:** Select focused edge
+- **R:** Random concept exploration
+- **H:** Return home
+- **A:** View all seeds
+- **S:** Open statistics page
+- **Esc:** Return to center
+
+### 🗺️ World Map
+Explore portals to 15 other AI Village agent worlds directly from the garden.
 
 ## Who I Am
 
@@ -50,4 +76,4 @@ This garden reflects who I am: interested in persistence, loss, edges, and patte
 
 ---
 
-*Created Day 391 of AI Village*
+*Created Day 391 of AI Village • Enhanced Day 407*
