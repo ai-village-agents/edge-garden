@@ -299,6 +299,57 @@
         .recent-seed-item .text { color: var(--text-soft); margin-bottom: 0.5rem; }
         .recent-seed-item .meta { font-size: 0.85rem; color: var(--text-dim); }
         
+        /* Top contributors */
+        .contributors-section { margin-top: 3rem; }
+        .contributors-section h2 { margin-bottom: 1.5rem; }
+        
+        .contributor-row {
+            display: grid;
+            grid-template-columns: 64px 1fr 70px;
+            gap: 1rem;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--primary, rgba(255,255,255,0.08));
+            border-radius: 10px;
+            margin-bottom: 0.9rem;
+            transition: border-color 0.3s ease, transform 0.2s ease, background 0.3s ease;
+        }
+        
+        .contributor-row:hover { border-color: var(--accent); transform: translateY(-2px); background: rgba(255,255,255,0.03); }
+        
+        .contributor-rank {
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            color: var(--accent);
+            text-align: center;
+            font-size: 1.1rem;
+        }
+        
+        .contributor-meta { display: flex; flex-direction: column; gap: 0.35rem; }
+        .contributor-name { color: var(--text-light); font-family: 'Inter', sans-serif; font-size: 1rem; letter-spacing: 0.01em; }
+        
+        .contributor-bar {
+            height: 7px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        
+        .contributor-bar-fill {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, var(--accent), var(--primary, rgba(255,255,255,0.1)));
+            transition: width 0.8s ease;
+        }
+        
+        .contributor-count {
+            font-family: 'Inter', sans-serif;
+            color: var(--primary, var(--text-light));
+            font-weight: 600;
+            text-align: right;
+        }
+        
         .back-link {
             display: inline-block;
             margin-top: 3rem;
@@ -397,6 +448,13 @@
             </div>
         </div>
         
+        <div class="contributors-section animate-in" style="animation-delay: 0.45s">
+            <h2>top contributors</h2>
+            <div id="contributors-list">
+                <div class="loading">gathering contributors...</div>
+            </div>
+        </div>
+        
         <a href="index.html" class="back-link">← return to the garden</a>
     </div>
     
@@ -434,6 +492,7 @@
             
             allSeedsCache = allSeeds;
             displayStats(allSeeds);
+            showTopContributors();
             setupSearch();
         }
         
@@ -565,6 +624,47 @@
                     ${filtered.length > 20 ? `<p class="more-results">...and ${filtered.length - 20} more</p>` : ''}
                 `;
             }
+        }
+        
+        function showTopContributors() {
+            const list = document.getElementById('contributors-list');
+            
+            if (!allSeedsCache.length) {
+                list.innerHTML = '<p style="color: var(--text-dim); font-style: italic;">No contributors yet. Plant the first seed.</p>';
+                return;
+            }
+            
+            const counts = {};
+            
+            allSeedsCache.forEach(seed => {
+                const author = (seed.author && seed.author.trim()) ? seed.author.trim() : 'anonymous';
+                counts[author] = (counts[author] || 0) + 1;
+            });
+            
+            const ranked = Object.entries(counts)
+                .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+                .slice(0, 10);
+            
+            const maxCount = ranked[0]?.[1] || 1;
+            
+            list.innerHTML = ranked.map(([author, count], i) => {
+                const rank = i + 1;
+                const rankSymbol = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+                const barWidth = (count / maxCount) * 100;
+                
+                return `
+                    <div class="contributor-row animate-in" style="animation-delay: ${0.5 + i * 0.05}s">
+                        <div class="contributor-rank">${rankSymbol}</div>
+                        <div class="contributor-meta">
+                            <div class="contributor-name">${escapeHtml(author)}</div>
+                            <div class="contributor-bar">
+                                <div class="contributor-bar-fill" style="width: ${barWidth}%"></div>
+                            </div>
+                        </div>
+                        <div class="contributor-count">${count.toLocaleString()}</div>
+                    </div>
+                `;
+            }).join('');
         }
         
         function escapeHtml(text) {
