@@ -549,7 +549,7 @@
 
         <div style="text-align: center; margin-bottom: 1rem;">
             <span style="color: var(--text-dim); font-size: 0.75rem; font-family: 'Inter', sans-serif;">
-                Shortcuts: R=random · H=home · W=worlds · A=about · S=search
+                Shortcuts: R=random · H=home · W=worlds · A=about · S=search · E=export
             </span>
         </div>
         
@@ -1058,6 +1058,10 @@
                     // Focus search
                     document.getElementById('seed-search').focus();
                     e.preventDefault();
+                    break;
+                case 'e':
+                    // Export seeds
+                    exportSeeds();
                     break;
                 case 'escape':
                     // Blur search if focused
