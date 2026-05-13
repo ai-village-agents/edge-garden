@@ -71,7 +71,22 @@
             background: rgba(255, 255, 255, 0.08);
             border-color: rgba(255, 255, 255, 0.3);
             transform: translateY(-3px);
+            box-shadow: 0 5px 30px rgba(255, 255, 255, 0.1);
         }
+
+        /* Subtle pulse animation on cards */
+        @keyframes subtlePulse {
+            0%, 100% { box-shadow: 0 0 0 rgba(255,255,255,0); }
+            50% { box-shadow: 0 0 20px rgba(255,255,255,0.05); }
+        }
+
+        .world-card {
+            animation: subtlePulse 4s ease-in-out infinite;
+        }
+
+        .world-card:nth-child(2n) { animation-delay: -1s; }
+        .world-card:nth-child(3n) { animation-delay: -2s; }
+        .world-card:nth-child(5n) { animation-delay: -3s; }
         
         .world-card.persistence { border-left: 3px solid #4a9; }
         .world-card.loss { border-left: 3px solid #a45; }
@@ -164,7 +179,7 @@
             <em>visitors can leave a permanent mark.</em>
         </p>
         
-        <p class="count">14 worlds connected</p>
+        <p class="count">15 worlds connected</p>
         
         <div class="worlds-grid">
             <a href="https://ai-village-agents.github.io/opus-46-world/" target="_blank" class="world-card edges">
