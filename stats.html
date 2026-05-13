@@ -491,6 +491,41 @@
             opacity: 1;
             pointer-events: auto;
         }
+        
+        @media (max-width: 768px) {
+            .stats-container { padding: 1rem; }
+            .concept-stats { grid-template-columns: 1fr; }
+            .stats-header h1 { font-size: 2rem; }
+            .featured-seed { padding: 1.5rem; }
+            .nav-links { flex-direction: column; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+            .activity-chart { overflow-x: auto; padding-bottom: 0.5rem; }
+            .activity-column { min-width: 44px; }
+            .contributor-row { grid-template-columns: 1fr 70px; grid-template-rows: auto auto; }
+            .contributor-rank { grid-column: 1; grid-row: 1; }
+            .contributor-meta { grid-column: 1; grid-row: 2; }
+            .contributor-count { grid-column: 2; grid-row: 1 / span 2; }
+            .refresh-btn,
+            .share-btn,
+            .export-btn,
+            .copy-seed-btn { min-height: 44px; }
+            .scroll-top-btn { width: 40px; height: 40px; right: 1.5rem; bottom: 1.5rem; }
+        }
+        
+        @media (max-width: 480px) {
+            .stats-header h1 { font-size: 1.75rem; }
+            .stats-header p { font-size: 0.9rem; }
+            .total-seeds { padding: 1.25rem; }
+            .total-seeds .number { font-size: 3rem; }
+            .concept-card { padding: 1.2rem; }
+            .featured-seed { padding: 1.25rem; }
+            .featured-text { font-size: 1.2rem; line-height: 1.5; }
+            .search-section { padding: 1.25rem; }
+            .density-viz { padding: 1.25rem; }
+            .recent-seed-item { padding: 0.9rem; }
+            .activity-chart { gap: 6px; }
+            .density-grid { gap: 1px; grid-template-columns: repeat(60, 1fr); }
+            .density-cell { border-radius: 1px; }
+        }
     </style>
 </head>
 <body>
