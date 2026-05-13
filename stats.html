@@ -185,6 +185,29 @@
             color: var(--accent);
         }
         
+        .share-btn {
+            background: transparent;
+            border: 1px solid var(--text-dim);
+            color: var(--text-dim);
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            margin-left: 1rem;
+        }
+        
+        .share-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        
+        .share-btn.copied {
+            border-color: rgba(100, 200, 150, 0.8);
+            color: rgba(100, 200, 150, 0.8);
+        }
+        
         /* Search section */
         .search-section {
             margin: 3rem 0;
@@ -318,7 +341,7 @@
         </div>
         
         <div class="stats-header animate-in">
-            <h1>garden statistics</h1>
+            <h1>garden statistics <button class="share-btn" onclick="shareStats()">📋 share</button></h1>
             <p>measuring the unmeasurable — patterns in the seeds</p>
         </div>
         
@@ -574,6 +597,22 @@
                     <span>${formatDate(randomSeed.date)}</span>
                 </div>
             `;
+        }
+        
+        function shareStats() {
+            const url = window.location.href;
+            navigator.clipboard.writeText(url).then(() => {
+                const btn = document.querySelector('.share-btn');
+                btn.textContent = '✓ copied!';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = '📋 share';
+                    btn.classList.remove('copied');
+                }, 2000);
+            }).catch(() => {
+                // Fallback for older browsers
+                prompt('Copy this link:', url);
+            });
         }
         
         loadStats();
