@@ -1087,6 +1087,11 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        @keyframes helpFade {
+            from { opacity: 0; transform: translateY(8px) scale(0.99); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
         @keyframes shimmer {
             0% { background-position: -200% 0; }
             100% { background-position: 200% 0; }
@@ -1140,6 +1145,125 @@
         .scroll-top-btn.visible {
             opacity: 1;
             pointer-events: auto;
+        }
+
+        .help-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+            z-index: 2000;
+            padding: 1.5rem;
+        }
+
+        .help-modal.show {
+            opacity: 1;
+            pointer-events: auto;
+            visibility: visible;
+        }
+
+        .help-card {
+            position: relative;
+            max-width: 520px;
+            width: 100%;
+            background: #ffffff;
+            color: #0f162d;
+            border-radius: 14px;
+            padding: 1.5rem 1.5rem 1.25rem;
+            box-shadow: 0 16px 60px rgba(0, 0, 0, 0.35);
+            animation: helpFade 0.25s ease;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .help-card h2 {
+            margin: 0 0 0.75rem 0;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .help-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem 1rem;
+        }
+
+        .help-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 10px;
+            padding: 0.65rem 0.75rem;
+        }
+
+        .shortcut-key {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 34px;
+            border-radius: 8px;
+            background: #0f162d;
+            color: #f7f7ff;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.04em;
+            box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25);
+        }
+
+        .shortcut-desc {
+            color: var(--text-soft);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .help-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            border: none;
+            background: transparent;
+            color: inherit;
+            font-size: 1.25rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .help-close:hover {
+            color: var(--accent);
+        }
+
+        .help-close:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 3px;
+        }
+
+        .help-btn {
+            font-weight: 600;
+        }
+
+        body.dark-mode .help-card {
+            background: #0f162d;
+            color: #e0e0e0;
+            border-color: #2a3f5f;
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+        }
+
+        body.dark-mode .help-item {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        body.dark-mode .shortcut-key {
+            background: #2a3f5f;
+            color: #f5f5f5;
+            box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.35);
         }
         
         @media (max-width: 768px) {
@@ -1331,13 +1455,34 @@
             <a href="index.html">← garden</a>
             <a href="worlds.html">worlds</a>
             <a href="about.html">about</a>
+            <button id="help-btn" class="theme-toggle help-btn" type="button" aria-label="Show help">?</button>
             <button id="compact-toggle" class="theme-toggle compact-toggle" type="button" aria-label="Toggle compact view">📊</button>
             <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">☀️</button>
         </div>
 
+        <div id="help-modal" class="help-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="help-title">
+            <div class="help-card">
+                <button id="help-close" class="help-close" type="button" aria-label="Close help">×</button>
+                <h2 id="help-title">Keyboard Shortcuts & Features</h2>
+                <div class="help-grid">
+                    <div class="help-item"><span class="shortcut-key">R</span><span class="shortcut-desc">Random seed</span></div>
+                    <div class="help-item"><span class="shortcut-key">H</span><span class="shortcut-desc">Home</span></div>
+                    <div class="help-item"><span class="shortcut-key">W</span><span class="shortcut-desc">Worlds</span></div>
+                    <div class="help-item"><span class="shortcut-key">A</span><span class="shortcut-desc">About</span></div>
+                    <div class="help-item"><span class="shortcut-key">S</span><span class="shortcut-desc">Search</span></div>
+                    <div class="help-item"><span class="shortcut-key">E</span><span class="shortcut-desc">Export</span></div>
+                    <div class="help-item"><span class="shortcut-key">T</span><span class="shortcut-desc">Theme</span></div>
+                    <div class="help-item"><span class="shortcut-key">F</span><span class="shortcut-desc">Favorites</span></div>
+                    <div class="help-item"><span class="shortcut-key">P</span><span class="shortcut-desc">Auto-play</span></div>
+                    <div class="help-item"><span class="shortcut-key">C</span><span class="shortcut-desc">Compact</span></div>
+                    <div class="help-item"><span class="shortcut-key">Esc</span><span class="shortcut-desc">Close / blur</span></div>
+                </div>
+            </div>
+        </div>
+
         <div style="text-align: center; margin-bottom: 1rem;">
             <span style="color: var(--text-dim); font-size: 0.75rem; font-family: 'Inter', sans-serif;">
-                Shortcuts: R=random · P=play/pause · H=home · W=worlds · A=about · S=search · E=export · T=theme · C=compact
+                Shortcuts: R=random · P=play/pause · H=home · W=worlds · A=about · S=search · F=favorites · E=export · T=theme · C=compact · ?=help
             </span>
         </div>
         
@@ -1516,6 +1661,29 @@
             applyCompact(next);
         }
 
+        function isHelpOpen() {
+            const modal = document.getElementById('help-modal');
+            return !!(modal && modal.classList.contains('show'));
+        }
+
+        function showHelp() {
+            const modal = document.getElementById('help-modal');
+            if (!modal) return;
+            modal.classList.add('show');
+            modal.setAttribute('aria-hidden', 'false');
+            const closeBtn = document.getElementById('help-close');
+            if (closeBtn) {
+                closeBtn.focus();
+            }
+        }
+
+        function hideHelp() {
+            const modal = document.getElementById('help-modal');
+            if (!modal) return;
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
         function loadFavorites() {
             try {
                 const saved = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || '[]');
@@ -1676,6 +1844,22 @@
             initCompactMode();
             startTypingBanner();
             updateFavoritesDisplay();
+            const helpBtn = document.getElementById('help-btn');
+            const helpModal = document.getElementById('help-modal');
+            const helpClose = document.getElementById('help-close');
+
+            if (helpBtn && helpModal) {
+                helpBtn.addEventListener('click', showHelp);
+                if (helpClose) {
+                    helpClose.addEventListener('click', hideHelp);
+                }
+                helpModal.addEventListener('click', (e) => {
+                    if (e.target === helpModal) {
+                        hideHelp();
+                    }
+                });
+            }
+
             const skeleton = document.getElementById('loading-skeleton');
 
             if (!skeleton) {
@@ -2276,8 +2460,28 @@
         
         // Keyboard shortcuts for stats page
         document.addEventListener('keydown', (e) => {
-            // Don't trigger if typing in search box
-            if (e.target.tagName === 'INPUT') return;
+            const activeTag = (e.target.tagName || '').toLowerCase();
+            const isInputLike = activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select';
+            const helpKey = e.key === '?' || (e.key === '/' && e.shiftKey);
+
+            if (helpKey) {
+                e.preventDefault();
+                showHelp();
+                return;
+            }
+
+            if (isHelpOpen() && e.key === 'Escape') {
+                e.preventDefault();
+                hideHelp();
+                return;
+            }
+
+            if (isInputLike) {
+                if (e.key === 'Escape') {
+                    e.target.blur();
+                }
+                return;
+            }
             
             switch(e.key.toLowerCase()) {
                 case 'r':
