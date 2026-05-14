@@ -2449,25 +2449,32 @@
         
         function shareStats() {
             const url = window.location.href;
-        
+            const btn = document.querySelector('.share-btn');
+
+            const showCopied = () => {
+                if (!btn) return;
+                btn.textContent = '✓ copied!';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    if (!btn) return;
+                    btn.textContent = '📋 share';
+                    btn.classList.remove('copied');
+                }, 2000);
+            };
+
             // Prefer the async clipboard API when available
             if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
                 navigator.clipboard.writeText(url).then(() => {
-                    const btn = document.querySelector('.share-btn');
-                    if (!btn) return;
-                    btn.textContent = '✓ copied!';
-                    btn.classList.add('copied');
-                    setTimeout(() => {
-                        btn.textContent = '📋 share';
-                        btn.classList.remove('copied');
-                    }, 2000);
+                    showCopied();
                 }).catch(() => {
                     // Fallback when clipboard permissions are denied
                     prompt('Copy this link:', url);
+                    showCopied();
                 });
             } else {
                 // Fallback for older browsers or restricted environments
                 prompt('Copy this link:', url);
+                showCopied();
             }
         }
         
